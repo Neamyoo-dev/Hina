@@ -61,8 +61,8 @@ class ClickGuiScreen : Screen(Component.literal("ClickGUI")) {
 
     override fun mouseClicked(event: MouseButtonEvent, bl: Boolean): Boolean {
         if (panel != null) {
-            val scaleX = minecraft.window.guiScaledWidth.toDouble() / minecraft.window.screenWidth
-            val scaleY = minecraft.window.guiScaledHeight.toDouble() / minecraft.window.screenHeight
+            val scaleX = minecraft.window.guiScale.toDouble()
+            val scaleY = minecraft.window.guiScale.toDouble()
             return panel!!.mouseClicked(event.x() * scaleX, event.y() * scaleY, event.button())
         }
         return super.mouseClicked(event, bl)
@@ -70,8 +70,8 @@ class ClickGuiScreen : Screen(Component.literal("ClickGUI")) {
 
     override fun mouseReleased(event: MouseButtonEvent): Boolean {
         if (panel != null) {
-            val scaleX = minecraft.window.guiScaledWidth.toDouble() / minecraft.window.screenWidth
-            val scaleY = minecraft.window.guiScaledHeight.toDouble() / minecraft.window.screenHeight
+            val scaleX = minecraft.window.guiScale.toDouble()
+            val scaleY = minecraft.window.guiScale.toDouble()
             panel!!.mouseReleased(event.x() * scaleX, event.y() * scaleY, event.button())
         }
         return super.mouseReleased(event)
@@ -79,7 +79,7 @@ class ClickGuiScreen : Screen(Component.literal("ClickGUI")) {
 
     override fun mouseScrolled(mouseX: Double, mouseY: Double, scrollX: Double, scrollY: Double): Boolean {
         if (panel != null) {
-            val scaleY = minecraft.window.guiScaledHeight.toDouble() / minecraft.window.screenHeight
+            val scaleY = minecraft.window.guiScale.toDouble()
             return panel!!.mouseScrolled(mouseY * scaleY, scrollY)
         }
         return false
