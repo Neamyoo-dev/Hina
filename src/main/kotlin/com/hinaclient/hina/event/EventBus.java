@@ -18,6 +18,8 @@
 
 package com.hinaclient.hina.event;
 
+import com.hinaclient.hina.MioHr;
+
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -48,7 +50,7 @@ public class EventBus {
                         try {
                             method.invoke(subscriber, event);
                         } catch (Exception e) {
-                            e.printStackTrace();
+                            MioHr.getINSTANCE().getLogger().error("Error invoking event handler", e);
                         }
                     };
 

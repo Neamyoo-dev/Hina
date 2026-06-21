@@ -15,27 +15,28 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
 package com.hinaclient.hina.mixin.mixins;
 
-import com.hinaclient.hina.ui.HinaTitleScreen;
-import com.hinaclient.hina.ui.LoginScreen;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.TitleScreen;
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import com.hinaclient.hina.MioHr;
+import com.hinaclient.hina.module.impl.render.FullbrightModule;
+import net.minecraft.client.renderer.LightTexture;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(TitleScreen.class)
-public class HinaTitleScreenMixin {
-    @Inject(method = "init()V", at = @At("HEAD"), cancellable = true)
-    public void onInit(CallbackInfo ci) {
-        Minecraft.getInstance().setScreen(new LoginScreen(new HinaTitleScreen()));
-        ci.cancel();
-    }
-
-    @Inject(method = "render", at = @At("HEAD"), cancellable = true)
-    public void onRender(CallbackInfo ci) {
-        ci.cancel();
+/**
+ * @author Eatgrapes
+ * @link github.com/Eatgrapes
+ */
+@Mixin(LightTexture.class)
+public class LightmapMixin {
+    @ModifyExpressionValue(method = "updateLightTexture(F)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/OptionInstance;get()Ljava/lang/Object;", ordinal = 1))
+    private Object injectFullBright(Object original) {
+        FullbrightModule fullbright = (FullbrightModule) MioHr.getINSTANCE().moduleManager.getModuleByName("Fullbright");
+        if (fullbright != null && fullbright.isEnabled()) {
+            return 10.0;
+        }
+        return original;
     }
 }

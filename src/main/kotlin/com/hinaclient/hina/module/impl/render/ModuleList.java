@@ -17,7 +17,7 @@
  */
 package com.hinaclient.hina.module.impl.render;
 
-import com.hinaclient.hina.HinaClient;
+import com.hinaclient.hina.MioHr;
 import com.hinaclient.hina.event.EventListener;
 import com.hinaclient.hina.event.skia.EventSkiaDrawScene;
 import com.hinaclient.hina.module.Category;
@@ -27,7 +27,6 @@ import com.hinaclient.hina.setting.ColorSetting;
 import com.hinaclient.hina.skia.font.FontManager;
 import io.github.humbleui.skija.*;
 import io.github.humbleui.types.RRect;
-import io.github.humbleui.types.Rect;
 
 import java.util.*;
 import java.util.Comparator;
@@ -60,7 +59,7 @@ public class ModuleList extends Module {
         Font textFont = FontManager.INSTANCE.getTextFont(16f);
         Font iconFont = FontManager.INSTANCE.getIconFont(18f);
 
-        for (Module m : HinaClient.getINSTANCE().moduleManager.getModules()) {
+        for (Module m : MioHr.getINSTANCE().moduleManager.getModules()) {
             boolean enabled = m.isEnabled() && !Objects.equals(m.getName(), "ClickGUI") && !Objects.equals(m.getName(), "ModuleList");
             float target = enabled ? 1.0f : 0.0f;
             float current = moduleProgressMap.getOrDefault(m, 0.0f);

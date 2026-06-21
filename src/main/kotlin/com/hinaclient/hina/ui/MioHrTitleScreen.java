@@ -17,6 +17,7 @@
  */
 package com.hinaclient.hina.ui;
 
+import com.hinaclient.hina.MioHr;
 import com.hinaclient.hina.event.EventBus;
 import com.hinaclient.hina.event.EventListener;
 import com.hinaclient.hina.event.skia.EventSkiaDrawScene;
@@ -40,17 +41,17 @@ import ru.vidtu.ias.screen.AccountScreen;
 import java.util.ArrayList;
 import java.util.List;
 
-public class HinaTitleScreen extends Screen {
+public class MioHrTitleScreen extends Screen {
     private final List<HinaTitleButton> buttons = new ArrayList<>();
 
     private int mx, my;
     private float delta;
-    private static Image hinaImage = null;
+    private static Image Image = null;
     private boolean nrb = true;
 
-    public HinaTitleScreen() {
-        super(Component.literal("HinaTitleScreen"));
-        loadHinaImage();
+    public MioHrTitleScreen() {
+        super(Component.literal("MioHr TitleScreen"));
+        loadImage();
     }
 
     @Override
@@ -155,17 +156,17 @@ public class HinaTitleScreen extends Screen {
         canvas.restore();
     }
 
-    private void loadHinaImage() {
-        if (hinaImage == null) {
+    private void loadImage() {
+        if (Image == null) {
             try {
                 var is = Minecraft.getInstance().getResourceManager()
-                        .getResource(Identifier.fromNamespaceAndPath("hina", "textures/gui/title/hina_bg.png"))
+                        .getResource(Identifier.fromNamespaceAndPath("miohr", "textures/gui/title/bg.png"))
                         .get().open();
 
                 byte[] bytes = is.readAllBytes();
-                hinaImage = Image.makeDeferredFromEncodedBytes(bytes);
+                Image = io.github.humbleui.skija.Image.makeDeferredFromEncodedBytes(bytes);
             } catch (Exception e) {
-                e.printStackTrace();
+                MioHr.getINSTANCE().getLogger().error("Failed to load HINA image", e);
             }
         }
     }
@@ -174,11 +175,11 @@ public class HinaTitleScreen extends Screen {
         int screenWidth = this.minecraft.getWindow().getWidth();
         int screenHeight = this.minecraft.getWindow().getHeight();
 
-        if (hinaImage != null) {
+        if (Image != null) {
             canvas.save();
 
             canvas.drawImageRect(
-                    hinaImage,
+                    Image,
                     Rect.makeXYWH(0, 0, screenWidth, screenHeight)
             );
 

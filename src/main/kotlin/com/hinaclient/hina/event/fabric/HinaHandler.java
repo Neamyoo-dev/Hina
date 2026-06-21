@@ -18,7 +18,7 @@
 
 package com.hinaclient.hina.event.fabric;
 
-import com.hinaclient.hina.HinaClient;
+import com.hinaclient.hina.MioHr;
 import com.hinaclient.hina.event.EventBus;
 import com.hinaclient.hina.event.impl.server.ServerMessageEvent;
 import com.hinaclient.hina.skia.font.FontManager;
@@ -39,14 +39,14 @@ public class HinaHandler {
                 } catch (Exception ignored) {
                 }
             }
-            while (HinaClient.getINSTANCE().clickGuiKey.isDown()) {
+            while (MioHr.getINSTANCE().clickGuiKey.isDown()) {
                 if (!(client.screen instanceof ClickGuiScreen)) {
-                    HinaClient.getINSTANCE().moduleManager.getClickGuiModule().setEnabled(true);
+                    MioHr.getINSTANCE().moduleManager.getClickGuiModule().setEnabled(true);
                 }
             }
         });
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
-            HinaClient.getINSTANCE().configManager.save();
+            MioHr.getINSTANCE().configManager.save();
         });
     }
 

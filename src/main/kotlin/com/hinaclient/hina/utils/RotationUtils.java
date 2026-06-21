@@ -54,7 +54,7 @@ public class RotationUtils {
         float fixedYaw = lastYaw + fixedDeltaYaw;
         float fixedPitch = lastPitch + fixedDeltaPitch;
 
-        return new float[]{fixedYaw, Mth.clamp(fixedPitch, -90.0F, 90.0F)};
+        return clampToValid(fixedYaw, fixedPitch);
     }
 
     /**
@@ -71,6 +71,9 @@ public class RotationUtils {
             float deltaPitch = targetPitch - lastPitch;
 
             double distance = Math.sqrt(deltaYaw * deltaYaw + deltaPitch * deltaPitch);
+            if (distance < 1e-6) {
+                return applyGCD(targetYaw, targetPitch, lastYaw, lastPitch);
+            }
             double distributionYaw = Math.abs(deltaYaw / distance);
             double distributionPitch = Math.abs(deltaPitch / distance);
 
@@ -83,7 +86,6 @@ public class RotationUtils {
             yaw = lastYaw + moveYaw;
             pitch = lastPitch + movePitch;
 
-            // Add subtle noise
             if (Math.abs(moveYaw) + Math.abs(movePitch) > 1) {
                 yaw += (float) ((ThreadLocalRandom.current().nextFloat() - 0.5) / 1000);
                 pitch -= (float) (ThreadLocalRandom.current().nextFloat() / 200);
@@ -91,6 +93,12 @@ public class RotationUtils {
         }
 
         return applyGCD(yaw, pitch, lastYaw, lastPitch);
+    }
+
+    public static float[] clampToValid(float yaw, float pitch) {
+        if (Float.isNaN(yaw) || Float.isInfinite(yaw)) yaw = 0f;
+        if (Float.isNaN(pitch) || Float.isInfinite(pitch)) pitch = 0f;
+        return new float[]{Mth.wrapDegrees(yaw), Mth.clamp(pitch, -90f, 90f)};
     }
 
     /**
@@ -105,7 +113,7 @@ public class RotationUtils {
         float yaw = (float) (Math.atan2(dz, dx) * 180.0 / Math.PI) - 90.0f;
         float pitch = (float) -(Math.atan2(dy, distXZ) * 180.0 / Math.PI);
 
-        return new float[]{Mth.wrapDegrees(yaw), Mth.wrapDegrees(pitch)};
+        return clampToValid(yaw, pitch);
     }
 
     /**

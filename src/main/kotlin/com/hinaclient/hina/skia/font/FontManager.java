@@ -51,12 +51,12 @@ public class FontManager {
         if (initialized) return;
         try {
             InputStream textStream = Minecraft.getInstance().getResourceManager()
-                .getResource(Identifier.fromNamespaceAndPath("hina", "fonts/pingfang-regular.ttf")).get().open();
+                .getResource(Identifier.fromNamespaceAndPath("miohr", "fonts/pingfang-regular.ttf")).get().open();
             byte[] textBytes = textStream.readAllBytes();
             textTypeface = Typeface.makeFromData(Data.makeFromBytes(textBytes));
             
             InputStream iconStream = Minecraft.getInstance().getResourceManager()
-                .getResource(Identifier.fromNamespaceAndPath("hina", "fonts/icon.ttf")).get().open();
+                .getResource(Identifier.fromNamespaceAndPath("miohr", "fonts/icon.ttf")).get().open();
             byte[] iconBytes = iconStream.readAllBytes();
             iconTypeface = Typeface.makeFromData(Data.makeFromBytes(iconBytes));
             

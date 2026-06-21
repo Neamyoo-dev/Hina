@@ -17,7 +17,7 @@
  */
 package com.hinaclient.hina.mixin.mixins;
 
-import com.hinaclient.hina.HinaClient;
+import com.hinaclient.hina.MioHr;
 import com.hinaclient.hina.mixin.utils.EntityRenderStateAccessor;
 import com.hinaclient.hina.module.impl.render.ChamsModule;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
@@ -42,7 +42,7 @@ public class MixinEntityRenderer <T extends Entity, S extends EntityRenderState>
 
     @Unique
     private static boolean hina$shouldRenderOutline(Entity entity) {
-        ChamsModule module = (ChamsModule) HinaClient.getINSTANCE().moduleManager.getModuleByName("Chams");
+        ChamsModule module = (ChamsModule) MioHr.getINSTANCE().moduleManager.getModuleByName("Chams");
         return module.isEnabled() && module.shouldOutline(entity);
     }
 
@@ -53,7 +53,7 @@ public class MixinEntityRenderer <T extends Entity, S extends EntityRenderState>
 
     @WrapOperation(method = "extractRenderState", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/Entity;getTeamColor()I"))
     private int injectTeamColor(Entity instance, Operation<Integer> original) {
-        ChamsModule module = (ChamsModule) HinaClient.getINSTANCE().moduleManager.getModuleByName("Chams");
+        ChamsModule module = (ChamsModule) MioHr.getINSTANCE().moduleManager.getModuleByName("Chams");
         if (instance instanceof LivingEntity && module.shouldOutline(instance)) {
             return module.outlineColor.getColor();
         }

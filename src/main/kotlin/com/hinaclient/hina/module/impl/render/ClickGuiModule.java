@@ -18,7 +18,7 @@
 
 package com.hinaclient.hina.module.impl.render;
 
-import com.hinaclient.hina.HinaClient;
+import com.hinaclient.hina.MioHr;
 import com.hinaclient.hina.module.Category;
 import com.hinaclient.hina.module.Module;
 import com.hinaclient.hina.ui.ClickGuiScreen;
@@ -57,6 +57,6 @@ public class ClickGuiModule extends Module {
     @Override
     protected void onDisable() {
         if (client.screen instanceof ClickGuiScreen) client.setScreen(null);
-        HinaClient.getINSTANCE().configManager.save();
+        MioHr.getINSTANCE().configManager.save();
     }
 }

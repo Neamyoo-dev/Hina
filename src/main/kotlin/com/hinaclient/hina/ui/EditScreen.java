@@ -1,31 +1,18 @@
-/*
- * Hina Client
- * Copyright (C) 2026 Hina Client
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
 package com.hinaclient.hina.ui;
 
-import com.hinaclient.hina.HinaClient;
+import com.hinaclient.hina.MioHr;
 import com.hinaclient.hina.event.EventBus;
 import com.hinaclient.hina.event.EventListener;
 import com.hinaclient.hina.event.skia.EventSkiaDrawScene;
 import com.hinaclient.hina.module.Module;
+import com.hinaclient.hina.skia.font.FontManager;
+import io.github.humbleui.skija.Font;
+import io.github.humbleui.skija.FontMetrics;
 import io.github.humbleui.skija.Paint;
 import io.github.humbleui.skija.PaintMode;
 import io.github.humbleui.types.RRect;
 import io.github.humbleui.types.Rect;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
@@ -33,27 +20,41 @@ import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class EditScreen extends Screen {
     private final List<Module> draggableModules;
     private Module draggingModule = null;
     private double dragOffsetX, dragOffsetY;
+    private final Set<Module> initializedModules = new HashSet<>();
+
+    private int lastMouseRenderX;
+    private int lastMouseRenderY;
+
+    private static final float MODULE_WIDTH = 100;
+    private static final float MODULE_HEIGHT = 30;
+    private static final float MODULE_CORNER = 4;
+    private static final float GRID_COLUMNS = 5;
+    private static final float GRID_STEP_X = 110;
+    private static final float GRID_STEP_Y = 40;
+    private static final float DEFAULT_X = 50;
+    private static final float DEFAULT_Y = 50;
 
     public EditScreen() {
         super(Component.literal("EditScreen"));
         this.draggableModules = new ArrayList<>();
-        List<Module> allModules = HinaClient.getINSTANCE().moduleManager.getModules();
-        float defaultX = 50;
-        float defaultY = 50;
-        float stepX = 110;
-        float stepY = 40;
+        List<Module> allModules = MioHr.getINSTANCE().moduleManager.getModules();
         int index = 0;
         for (Module module : allModules) {
             if (hasSkiaRender(module)) {
-                if (module.getX() == 0 && module.getY() == 0) {
-                    module.setX(defaultX + (index % 5) * stepX);
-                    module.setY(defaultY + ((double) index / 5) * stepY);
+                if (isPositionDefault(module)) {
+                    module.setX(DEFAULT_X + (index % GRID_COLUMNS) * GRID_STEP_X);
+                    module.setY(DEFAULT_Y + (index / GRID_COLUMNS) * GRID_STEP_Y);
+                    initializedModules.add(module);
                 }
                 draggableModules.add(module);
                 index++;
@@ -61,16 +62,35 @@ public class EditScreen extends Screen {
         }
     }
 
+    private boolean isPositionDefault(Module module) {
+        return !initializedModules.contains(module)
+                && module.getX() == 0 && module.getY() == 0
+                && !hasBeenDragged(module);
+    }
+
+    private boolean hasBeenDragged(Module module) {
+        return module.getX() != DEFAULT_X || module.getY() != DEFAULT_Y;
+    }
+
+    private static final Map<Class<?>, Boolean> SKIA_RENDER_CACHE = new HashMap<>();
+
     private boolean hasSkiaRender(Module module) {
-        for (Method method : module.getClass().getDeclaredMethods()) {
-            if (method.isAnnotationPresent(EventListener.class)) {
-                Class<?>[] params = method.getParameterTypes();
-                if (params.length == 1 && params[0].equals(EventSkiaDrawScene.class)) {
-                    return true;
+        Class<?> clazz = module.getClass();
+        return SKIA_RENDER_CACHE.computeIfAbsent(clazz, c -> {
+            Class<?> current = c;
+            while (current != null && current != Object.class) {
+                for (Method method : current.getDeclaredMethods()) {
+                    if (method.isAnnotationPresent(EventListener.class)) {
+                        Class<?>[] params = method.getParameterTypes();
+                        if (params.length == 1 && params[0].equals(EventSkiaDrawScene.class)) {
+                            return true;
+                        }
+                    }
                 }
+                current = current.getSuperclass();
             }
-        }
-        return false;
+            return false;
+        });
     }
 
     @Override
@@ -78,30 +98,51 @@ public class EditScreen extends Screen {
         EventBus.INSTANCE.register(this);
     }
 
+    @Override
+    public void render(@NotNull GuiGraphics context, int mouseX, int mouseY, float delta) {
+        this.lastMouseRenderX = mouseX;
+        this.lastMouseRenderY = mouseY;
+    }
+
     @EventListener
     public void onSkiaRender(@NotNull EventSkiaDrawScene event) {
+        if (this.minecraft.screen != this) {
+            EventBus.INSTANCE.unregister(this);
+            return;
+        }
+
         var canvas = event.getCanvas();
         float sw = (float) this.minecraft.getWindow().getGuiScaledWidth();
         float sh = (float) this.minecraft.getWindow().getGuiScaledHeight();
         int scale = this.minecraft.getWindow().getGuiScale();
 
-        try (var p = new Paint().setColor(0x40000000)) {
+        try (var p = new Paint().setColor(Colors.SHADOW)) {
             canvas.drawRect(Rect.makeWH(sw * scale, sh * scale), p);
         }
 
         if (draggingModule != null) {
-            double mouseX = this.minecraft.mouseHandler.xpos() * sw / this.minecraft.getWindow().getScreenWidth();
-            double mouseY = this.minecraft.mouseHandler.ypos() * sh / this.minecraft.getWindow().getScreenHeight();
-            draggingModule.setX(mouseX - dragOffsetX);
-            draggingModule.setY(mouseY - dragOffsetY);
+            draggingModule.setX(lastMouseRenderX - dragOffsetX);
+            draggingModule.setY(lastMouseRenderY - dragOffsetY);
         }
 
         canvas.save();
         canvas.scale(scale, scale);
+
+        if (draggableModules.isEmpty()) {
+            try (Paint textPaint = new Paint().setColor(Colors.TEXT_MUTED)) {
+                Font font = FontManager.INSTANCE.getTextFont(14);
+                FontMetrics metrics = font.getMetrics();
+                float textY = sh / 2 - (metrics.getAscent() + metrics.getDescent()) / 2;
+                canvas.drawString("No draggable modules", sw / 2 - 70, textY, font, textPaint);
+            }
+        }
+
         try (var p = new Paint().setMode(PaintMode.STROKE).setStrokeWidth(1f)) {
             for (Module mod : draggableModules) {
-                p.setColor(mod == draggingModule ? 0xFFD1C4E9 : 0x80FFFFFF);
-                canvas.drawRRect(RRect.makeXYWH((float)mod.getX(), (float)mod.getY(), 100, 30, 4), p);
+                p.setColor(mod == draggingModule ? Colors.GLASS_BORDER_ACTIVE : Colors.GLASS_BORDER);
+                canvas.drawRRect(
+                        RRect.makeXYWH((float) mod.getX(), (float) mod.getY(), MODULE_WIDTH, MODULE_HEIGHT, MODULE_CORNER),
+                        p);
             }
         }
         canvas.restore();
@@ -109,16 +150,23 @@ public class EditScreen extends Screen {
 
     @Override
     public boolean mouseClicked(@NotNull MouseButtonEvent event, boolean bl) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+
         float sw = (float) this.minecraft.getWindow().getGuiScaledWidth();
         float sh = (float) this.minecraft.getWindow().getGuiScaledHeight();
-        double mouseX = this.minecraft.mouseHandler.xpos() * sw / this.minecraft.getWindow().getScreenWidth();
-        double mouseY = this.minecraft.mouseHandler.ypos() * sh / this.minecraft.getWindow().getScreenHeight();
+        double scaleX = sw / (double) this.minecraft.getWindow().getScreenWidth();
+        double scaleY = sh / (double) this.minecraft.getWindow().getScreenHeight();
+
+        double localX = mouseX * scaleX;
+        double localY = mouseY * scaleY;
 
         for (Module mod : draggableModules) {
-            if (mouseX >= mod.getX() && mouseX <= mod.getX() + 100 && mouseY >= mod.getY() && mouseY <= mod.getY() + 30) {
+            if (localX >= mod.getX() && localX <= mod.getX() + MODULE_WIDTH
+                    && localY >= mod.getY() && localY <= mod.getY() + MODULE_HEIGHT) {
                 draggingModule = mod;
-                dragOffsetX = mouseX - mod.getX();
-                dragOffsetY = mouseY - mod.getY();
+                dragOffsetX = localX - mod.getX();
+                dragOffsetY = localY - mod.getY();
                 return true;
             }
         }
@@ -127,13 +175,17 @@ public class EditScreen extends Screen {
 
     @Override
     public boolean mouseReleased(@NotNull MouseButtonEvent event) {
-        draggingModule = null;
+        if (draggingModule != null) {
+            initializedModules.add(draggingModule);
+            draggingModule = null;
+        }
         return super.mouseReleased(event);
     }
 
     @Override
     public void removed() {
         EventBus.INSTANCE.unregister(this);
+        MioHr.getINSTANCE().configManager.save();
     }
 
     @Override

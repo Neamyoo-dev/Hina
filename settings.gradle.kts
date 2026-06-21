@@ -9,4 +9,4 @@ pluginManagement {
     }
 }
 
-rootProject.name = "hinaclient"
+rootProject.name = "miohr"

@@ -34,6 +34,7 @@ public class MixinEntity {
         if (self == Minecraft.getInstance().player && RotationManager.INSTANCE.isRotating()) {
             float yaw = RotationManager.INSTANCE.getServerYaw();
             float pitch = RotationManager.INSTANCE.getServerPitch();
+            if (Float.isNaN(yaw) || Float.isNaN(pitch)) return;
             cir.setReturnValue(Vec3.directionFromRotation(pitch, yaw));
         }
     }

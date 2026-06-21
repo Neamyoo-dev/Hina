@@ -58,7 +58,7 @@ public class LoginScreen extends Screen {
 
     private void loadBackgroundImage() {
         try {
-            var resource = this.minecraft.getResourceManager().getResource(Identifier.fromNamespaceAndPath("hina", "textures/gui/title/hina_bg.png"));
+            var resource = this.minecraft.getResourceManager().getResource(Identifier.fromNamespaceAndPath("miohr", "textures/gui/title/bg.png"));
             if (resource.isPresent()) {
                 try (InputStream stream = resource.get().open()) {
                     this.backgroundImage = Image.makeDeferredFromEncodedBytes(stream.readAllBytes());

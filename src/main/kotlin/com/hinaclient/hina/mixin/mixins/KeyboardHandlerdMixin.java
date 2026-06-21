@@ -18,25 +18,24 @@
 
 package com.hinaclient.hina.mixin.mixins;
 
-import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
-import com.hinaclient.hina.HinaClient;
-import com.hinaclient.hina.module.impl.render.FullbrightModule;
-import net.minecraft.client.renderer.LightTexture;
+import com.hinaclient.hina.event.EventBus;
+import com.hinaclient.hina.event.impl.KeyEvent;
+import net.minecraft.client.KeyboardHandler;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * @author Eatgrapes
- * @link github.com/Eatgrapes
+ * @Author: oneachina
+ * @Date: 2026/2/1 12:39
  */
-@Mixin(LightTexture.class)
-public class HinaLightmapMixin {
-    @ModifyExpressionValue(method = "updateLightTexture(F)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/OptionInstance;get()Ljava/lang/Object;", ordinal = 1))
-    private Object injectFullBright(Object original) {
-        FullbrightModule fullbright = (FullbrightModule) HinaClient.getINSTANCE().moduleManager.getModuleByName("Fullbright");
-        if (fullbright != null && fullbright.isEnabled()) {
-            return 10.0;
+@Mixin(KeyboardHandler.class)
+public class KeyboardHandlerdMixin {
+    @Inject(method = "keyPress", at = @At("HEAD"))
+    private void keyPress(long window, int action, net.minecraft.client.input.KeyEvent keyEvent, CallbackInfo ci) {
+        if (action == 1) {
+            EventBus.INSTANCE.post(new KeyEvent(keyEvent.key()));
         }
-        return original;
     }
 }

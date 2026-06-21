@@ -18,7 +18,7 @@
 
 package com.hinaclient.hina.management.config;
 
-import com.hinaclient.hina.HinaClient;
+import com.hinaclient.hina.MioHr;
 import com.hinaclient.hina.module.Module;
 import com.hinaclient.hina.setting.*;
 import com.google.gson.*;
@@ -48,7 +48,7 @@ public class ConfigManager {
     public void save() {
         JsonObject json = new JsonObject();
         JsonArray modulesArray = new JsonArray();
-        for (Module module : HinaClient.getINSTANCE().moduleManager.getModules()) {
+        for (Module module : MioHr.getINSTANCE().moduleManager.getModules()) {
             JsonObject moduleJson = new JsonObject();
             moduleJson.addProperty("name", module.getName());
             moduleJson.addProperty("enabled", module.isEnabled());
@@ -85,7 +85,7 @@ public class ConfigManager {
                 for (JsonElement element : modulesArray) {
                     JsonObject moduleJson = element.getAsJsonObject();
                     String name = moduleJson.get("name").getAsString();
-                    Module module = HinaClient.getINSTANCE().moduleManager.getModuleByName(name);
+                    Module module = MioHr.getINSTANCE().moduleManager.getModuleByName(name);
                     if (module != null) {
                         if (moduleJson.has("enabled")) module.setEnabled(moduleJson.get("enabled").getAsBoolean());
                         if (moduleJson.has("x")) module.setX(moduleJson.get("x").getAsDouble());

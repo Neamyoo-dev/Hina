@@ -25,6 +25,7 @@ import com.hinaclient.hina.module.Module;
 import com.hinaclient.hina.setting.BooleanSetting;
 import com.hinaclient.hina.setting.ModeSetting;
 import com.hinaclient.hina.setting.NumberSetting;
+import com.hinaclient.hina.utils.RotationUtils;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
@@ -125,8 +126,11 @@ public class LegitCrystal extends Module {
         double dz = targetPoint.z - playerEye.z;
         double distXZ = Math.sqrt(dx * dx + dz * dz);
 
-        float exactYaw = Mth.wrapDegrees((float) (Math.atan2(dz, dx) * 180.0 / Math.PI) - 90.0f);
+        float exactYaw = (float) (Math.atan2(dz, dx) * 180.0 / Math.PI) - 90.0f;
         float exactPitch = (float) -(Math.atan2(dy, distXZ) * 180.0 / Math.PI);
+        float[] clamped = RotationUtils.clampToValid(exactYaw, exactPitch);
+        exactYaw = clamped[0];
+        exactPitch = clamped[1];
 
         if (slient.getValue()) {
             RotationManager.INSTANCE.apply(exactYaw, exactPitch, 2);

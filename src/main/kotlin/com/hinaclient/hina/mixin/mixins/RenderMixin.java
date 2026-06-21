@@ -18,11 +18,8 @@
 
 package com.hinaclient.hina.mixin.mixins;
 
-import com.hinaclient.hina.event.EventBus;
-import com.hinaclient.hina.event.skia.EventSkiaDraw;
-import com.hinaclient.hina.event.skia.EventSkiaInit;
-import com.mojang.blaze3d.TracyFrameCapture;
-import com.mojang.blaze3d.platform.Window;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.renderer.GameRenderer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -32,18 +29,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * @author Eatgrapes
  * @link github.com/Eatgrapes
  */
-@Mixin(Window.class)
-public class HinaWindowMixin {
-    @Inject(method = "onFramebufferResize", at = @At("RETURN"))
-    private void onFramebufferResize(long window, int width, int height, CallbackInfo ci) {
-        int finalWidth = Math.max(width, 1);
-        int finalHeight = Math.max(height, 1);
+@Mixin(GameRenderer.class)
+public class RenderMixin {
+    @Inject(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/Gui;render(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/client/DeltaTracker;)V", shift = At.Shift.BEFORE))
+    public void render(DeltaTracker deltaTracker, boolean tick, CallbackInfo ci) {
 
-        EventBus.INSTANCE.post(new EventSkiaInit(finalWidth, finalHeight));
-    }
-
-    @Inject(method = "updateDisplay", at = @At("HEAD"))
-    private void onUpdateDisplay(TracyFrameCapture capturer, CallbackInfo ci) {
-        EventBus.INSTANCE.post(EventSkiaDraw.INSTANCE);
     }
 }

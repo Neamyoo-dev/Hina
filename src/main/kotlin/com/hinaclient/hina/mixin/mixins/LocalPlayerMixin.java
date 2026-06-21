@@ -41,10 +41,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * @Date: 2026/2/1 12:36
  */
 @Mixin(LocalPlayer.class)
-public abstract class HinaLocalPlayerMixin extends Entity {
+public abstract class LocalPlayerMixin extends Entity {
     @Shadow public ClientInput input;
 
-    public HinaLocalPlayerMixin(EntityType<?> entityType, Level level) {
+    public LocalPlayerMixin(EntityType<?> entityType, Level level) {
         super(entityType, level);
     }
 

@@ -17,7 +17,7 @@
  */
 package com.hinaclient.hina.mixin.mixins;
 
-import com.hinaclient.hina.HinaClient;
+import com.hinaclient.hina.MioHr;
 import com.hinaclient.hina.management.RotationManager;
 import com.hinaclient.hina.mixin.utils.EntityRenderStateAccessor;
 import com.hinaclient.hina.mixin.mixins.accessors.render.RenderSetupAccessor;
@@ -48,7 +48,7 @@ public class MixinLivingEntityRenderer <S extends LivingEntityRenderState>{
             float serverYaw = RotationManager.INSTANCE.getServerYaw();
             float serverPitch = RotationManager.INSTANCE.getServerPitch();
 
-            state.yRot = 0.0f;
+            state.yRot = serverYaw;
             state.xRot = serverPitch;
             state.bodyRot = serverYaw;
         }
@@ -68,7 +68,7 @@ public class MixinLivingEntityRenderer <S extends LivingEntityRenderState>{
         Entity entity = ((EntityRenderStateAccessor) state).hina$getEntity();
         if (entity == null || !ChamsModule.shouldRender(entity)) return original;
 
-        ChamsModule module = (ChamsModule) HinaClient.getINSTANCE().moduleManager.getModuleByName("Chams");
+        ChamsModule module = (ChamsModule) MioHr.getINSTANCE().moduleManager.getModuleByName("Chams");
         if (module.isEnabled()) {
             var renderSetup = ((RenderTypeAccessor) original).getState();
             boolean affectsOutline = ((RenderSetupAccessor) (Object) renderSetup).getOutlineProperty() == RenderSetup.OutlineProperty.AFFECTS_OUTLINE;

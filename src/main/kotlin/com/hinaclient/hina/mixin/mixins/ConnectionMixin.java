@@ -35,7 +35,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
  * @link: github.com/oneachina
  */
 @Mixin(Connection.class)
-public class HinaConnectionMixin {
+public class ConnectionMixin {
     @Redirect(
             method = "send(Lnet/minecraft/network/protocol/Packet;Lio/netty/channel/ChannelFutureListener;Z)V",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/network/Connection;sendPacket(Lnet/minecraft/network/protocol/Packet;Lio/netty/channel/ChannelFutureListener;Z)V")

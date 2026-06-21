@@ -40,7 +40,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * @link: github.com/oneachina
  */
 @Mixin(Minecraft.class)
-public abstract class HinaMinecraftMixin {
+public abstract class MinecraftMixin {
     @Shadow @Final private Window window;
 
     @Shadow protected abstract String createTitle();
@@ -49,12 +49,12 @@ public abstract class HinaMinecraftMixin {
     private int rightClickDelay;
 
     /**
-     * @author: Eatgrapes
-     * @reason Custom Window Title
+     * @author Neamyoo
+     * @reason miohro
      */
     @Overwrite
-    public void updateTitle() { // Mojang: updateTitle
-        this.window.setTitle("Hina Client for " + createTitle());
+    public void updateTitle() {
+        this.window.setTitle("MioHr Client for " + createTitle());
     }
 
     @Inject(method = "<init>", at = @At("TAIL"))

@@ -17,7 +17,7 @@
  */
 package com.hinaclient.hina.module.impl.render;
 
-import com.hinaclient.hina.HinaClient;
+import com.hinaclient.hina.MioHr;
 import com.hinaclient.hina.module.Category;
 import com.hinaclient.hina.module.Module;
 import com.hinaclient.hina.setting.BooleanSetting;
@@ -112,13 +112,13 @@ public class ChamsModule extends Module {
         builder.withDepthBias(1f, -1000000f);
 
         String name = "chams_" + (translucent ? "translucent" : "cutout") + (noCull ? "_no_cull" : "");
-        builder.withLocation(Identifier.fromNamespaceAndPath("hina", name));
+        builder.withLocation(Identifier.fromNamespaceAndPath("miohr", name));
 
         return builder.build();
     }
 
     public static boolean shouldRender(Entity entity) {
-        ChamsModule module = (ChamsModule) HinaClient.getINSTANCE().moduleManager.getModuleByName("Chams");
+        ChamsModule module = (ChamsModule) MioHr.getINSTANCE().moduleManager.getModuleByName("Chams");
         if (module == null || !module.isEnabled()) return false;
         if (entity instanceof Player && module.players.getValue()) return true;
         if (entity instanceof Monster && module.mobs.getValue()) return true;

@@ -1,28 +1,27 @@
 {
   "schemaVersion": 1,
-  "id": "hinaclient",
+  "id": "miohr",
   "version": "${version}",
-  "name": "Hina Client",
-  "accessWidener": "hina.accesswidener",
-  "description": "A free Minecraft hacked client for Fabric (Hina Client)",
+  "name": "MioHr Client",
+  "accessWidener": "miohr.accesswidener",
+  "description": "A free Minecraft hacked client for Fabric (MioHr Client)",
   "authors": [
-    "oneachina",
+    "Neamyoo",
     "tanikaze"
   ],
   "contact": {
-    "homepage": "https://tanikaze.icu",
-    "sources": "https://github.com/oneachina/Hina"
+    "sources": "https://github.com/Neamyoo-dev/MioHr"
   },
   "license": "MIT",
-  "icon": "assets/hina/icon.png",
+  "icon": "assets/miohr/icon.png",
   "environment": "*",
   "entrypoints": {
     "client": [
-      "com.hinaclient.hina.HinaClient"
+      "com.hinaclient.hina.MioHr"
     ]
   },
   "mixins": [
-    "hina.mixins.json"
+    "miohr.mixins.json"
   ],
   "depends": {
     "fabricloader": ">=0.18.4",

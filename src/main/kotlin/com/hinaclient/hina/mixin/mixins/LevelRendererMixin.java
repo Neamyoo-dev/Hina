@@ -19,23 +19,30 @@
 package com.hinaclient.hina.mixin.mixins;
 
 import com.hinaclient.hina.event.EventBus;
-import com.hinaclient.hina.event.impl.KeyEvent;
-import net.minecraft.client.KeyboardHandler;
+import com.hinaclient.hina.event.impl.Render3DEvent;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.state.LevelRenderState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * @Author: oneachina
- * @Date: 2026/2/1 12:39
+ * @author Eatgrapes, oneachina
+ * @link github.com/Eatgrapes
  */
-@Mixin(KeyboardHandler.class)
-public class HinaKeyboardHandlerdMixin {
-    @Inject(method = "keyPress", at = @At("HEAD"))
-    private void keyPress(long window, int action, net.minecraft.client.input.KeyEvent keyEvent, CallbackInfo ci) {
-        if (action == 1) {
-            EventBus.INSTANCE.post(new KeyEvent(keyEvent.key()));
-        }
+@Mixin(LevelRenderer.class)
+public class LevelRendererMixin {
+    @Inject(method = "renderBlockOutline", at = @At("HEAD"))
+    private void renderBlockOutline(MultiBufferSource.BufferSource bufferSource, PoseStack poseStack, boolean bl, LevelRenderState levelRenderState, CallbackInfo ci) {
+        EventBus.INSTANCE.post(new Render3DEvent(
+                Minecraft.getInstance().getDeltaTracker(),
+                poseStack,
+                poseStack.last().pose(),
+                bufferSource)
+        );
     }
 }

@@ -1,5 +1,6 @@
 package com.hinaclient.hina.utils.shader;
 
+import com.hinaclient.hina.MioHr;
 import io.github.humbleui.skija.*;
 import io.github.humbleui.types.Rect;
 import java.io.*;
@@ -17,7 +18,7 @@ public class LiquidGlassShader {
             String sksl = new String(is.readAllBytes(), StandardCharsets.UTF_8);
             effect = RuntimeEffect.makeForShader(sksl);
         } catch (Exception e) {
-            e.printStackTrace();
+            MioHr.getINSTANCE().getLogger().warn("Failed to load liquid glass shader, liquid glass effect will be disabled: ", e);
             effect = null;
         }
     }

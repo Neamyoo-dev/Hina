@@ -26,15 +26,15 @@ import com.mojang.blaze3d.platform.InputConstants
 import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper
 import net.minecraft.client.KeyMapping
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
 import org.lwjgl.glfw.GLFW
 
-class HinaClient : ClientModInitializer {
+class MioHr : ClientModInitializer {
 
     companion object {
-        const val MOD_ID: String = "hinaclient"
-
         @JvmStatic
-        lateinit var INSTANCE: HinaClient
+        lateinit var INSTANCE: MioHr
             private set
     }
 
@@ -42,6 +42,7 @@ class HinaClient : ClientModInitializer {
     lateinit var configManager: ConfigManager
     lateinit var clickGuiKey: KeyMapping
     lateinit var rotationManager: RotationManager
+    var logger: Logger = LogManager.getLogger("MioHr")
 
     override fun onInitializeClient() {
         INSTANCE = this
@@ -57,7 +58,7 @@ class HinaClient : ClientModInitializer {
 
         clickGuiKey = KeyBindingHelper.registerKeyBinding(
             KeyMapping(
-                "key.hina.clickgui",
+                "key.miohr.clickgui",
                 InputConstants.Type.KEYSYM,
                 GLFW.GLFW_KEY_RIGHT_SHIFT,
                 KeyMapping.Category.MISC

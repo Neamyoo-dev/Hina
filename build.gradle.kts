@@ -20,7 +20,7 @@ base {
 }
 
 loom {
-    accessWidenerPath.set(file("src/main/resources/hina.accesswidener"))
+    accessWidenerPath.set(file("src/main/resources/miohr.accesswidener"))
 }
 
 repositories {
