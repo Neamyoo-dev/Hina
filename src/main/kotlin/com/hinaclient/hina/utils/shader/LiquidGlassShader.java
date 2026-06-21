@@ -1,20 +1,3 @@
-/*
- * Hina Client
- * Copyright (C) 2026 Hina Client
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
 package com.hinaclient.hina.utils.shader;
 
 import io.github.humbleui.skija.*;
@@ -24,7 +7,9 @@ import java.nio.charset.StandardCharsets;
 
 public class LiquidGlassShader {
     private static RuntimeEffect effect;
-    private static long lastBgTextureId = 0;
+    private static Image cachedBackground;
+    private static Shader cachedShader;
+    private static Rect cachedRect;
 
     public static void init() {
         try (InputStream is = LiquidGlassShader.class.getResourceAsStream("/shaders/liquid_glass.sksl")) {
@@ -37,26 +22,42 @@ public class LiquidGlassShader {
         }
     }
 
-    public static Shader makeShader(Image background, float time, Rect screenRect, Rect glassRect, float radius) {
+    public static Shader makeShader(Image background, Rect glassRect) {
         if (effect == null) return null;
 
-        Data uniformData = Data.makeFromBytes(createUniforms(time, screenRect, glassRect, radius));
+        if (cachedBackground == background && cachedRect != null
+                && cachedRect.getLeft() == glassRect.getLeft()
+                && cachedRect.getTop() == glassRect.getTop()
+                && cachedRect.getWidth() == glassRect.getWidth()
+                && cachedRect.getHeight() == glassRect.getHeight()
+                && cachedShader != null) {
+            return cachedShader;
+        }
+
+        cachedBackground = background;
+        cachedRect = Rect.makeXYWH(glassRect.getLeft(), glassRect.getTop(), glassRect.getWidth(), glassRect.getHeight());
+
+        Data uniformData = Data.makeFromBytes(createUniforms(glassRect));
         Shader[] children = new Shader[]{ background.makeShader() };
-        return effect.makeShader(uniformData, children, null);
+        cachedShader = effect.makeShader(uniformData, children, null);
+        return cachedShader;
     }
 
-    private static byte[] createUniforms(float time, Rect screen, Rect glass, float radius) {
-        java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(48).order(java.nio.ByteOrder.nativeOrder());
-        buf.putFloat(time);
-        buf.putFloat(screen.getLeft());
-        buf.putFloat(screen.getTop());
-        buf.putFloat(screen.getWidth());
-        buf.putFloat(screen.getHeight());
+    public static void invalidateCache() {
+        if (cachedShader != null) {
+            cachedShader.close();
+            cachedShader = null;
+        }
+        cachedBackground = null;
+        cachedRect = null;
+    }
+
+    private static byte[] createUniforms(Rect glass) {
+        java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(16).order(java.nio.ByteOrder.nativeOrder());
         buf.putFloat(glass.getLeft());
         buf.putFloat(glass.getTop());
         buf.putFloat(glass.getWidth());
         buf.putFloat(glass.getHeight());
-        buf.putFloat(radius);
         return buf.array();
     }
 }

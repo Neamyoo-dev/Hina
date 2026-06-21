@@ -1,26 +1,8 @@
-/*
- * Hina Client
- * Copyright (C) 2026 Hina Client
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
 package com.hinaclient.hina.ui.clickgui.setting;
 
-import com.hinaclient.hina.module.impl.render.ClickGuiModule;
 import com.hinaclient.hina.setting.BooleanSetting;
 import com.hinaclient.hina.skia.font.FontManager;
+import com.hinaclient.hina.ui.Colors;
 import com.hinaclient.hina.ui.clickgui.Component;
 import io.github.humbleui.skija.*;
 import io.github.humbleui.types.RRect;
@@ -50,24 +32,31 @@ public class CheckboxComponent extends Component {
         this.currentY = y;
 
         try (Paint bg = new Paint()) {
-            bg.setColor(0x40FFFFFF);
+            bg.setColor(Colors.GLASS_ITEM_BG);
             canvas.drawRRect(RRect.makeXYWH(x, y, width, height, 8), bg);
         }
 
-        try (Paint textPaint = new Paint().setColor(0xFFEEEEEE)) {
+        try (Paint textPaint = new Paint().setColor(Colors.TEXT_SECONDARY)) {
             Font font = FontManager.INSTANCE.getTextFont(13);
             FontMetrics metrics = font.getMetrics();
             float textY = y + height / 2 - (metrics.getAscent() + metrics.getDescent()) / 2;
-            canvas.drawString(setting.getName(), x + 12, textY, font, textPaint);
+            canvas.drawString(setting.getName(), x + 14, textY, font, textPaint);
         }
 
-        float switchW = 36, switchH = 20;
-        float switchX = x + width - switchW - 12;
+        float switchW = 38, switchH = 20;
+        float switchX = x + width - switchW - 14;
         float switchY = y + (height - switchH) / 2;
 
         try (Paint track = new Paint()) {
-            track.setColor(animationProgress > 0.5f ? ClickGuiModule.getThemeColor() : 0xAA555555);
+            track.setColor(animationProgress > 0.5f ? Colors.getThemeColor() : Colors.SWITCH_TRACK_OFF);
             canvas.drawRRect(RRect.makeXYWH(switchX, switchY, switchW, switchH, switchH / 2), track);
+        }
+
+        try (Paint border = new Paint()) {
+            border.setMode(PaintMode.STROKE);
+            border.setStrokeWidth(1f);
+            border.setColor(Colors.GLASS_BORDER);
+            canvas.drawRRect(RRect.makeXYWH(switchX, switchY, switchW, switchH, switchH / 2), border);
         }
 
         float knobSize = switchH - 4;

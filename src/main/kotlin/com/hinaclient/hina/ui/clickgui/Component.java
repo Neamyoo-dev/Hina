@@ -42,6 +42,10 @@ public abstract class Component {
         return setting;
     }
 
+    public void setWidth(float w) {
+        this.width = w;
+    }
+
     public void update() {
         if (setting != null) {
             float target = setting.isVisible() ? 1f : 0f;

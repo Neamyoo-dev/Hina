@@ -1,27 +1,10 @@
-/*
- * Hina Client
- * Copyright (C) 2026 Hina Client
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
 package com.hinaclient.hina.ui.clickgui.setting;
 
 import com.hinaclient.hina.setting.ModeSetting;
 import com.hinaclient.hina.skia.SkiaRenderer;
 import com.hinaclient.hina.skia.font.FontManager;
 import com.hinaclient.hina.skia.font.Icon;
+import com.hinaclient.hina.ui.Colors;
 import com.hinaclient.hina.ui.clickgui.Component;
 import io.github.humbleui.skija.*;
 import io.github.humbleui.types.RRect;
@@ -65,25 +48,25 @@ public class ModeComponent extends Component {
         this.currentY = y;
 
         try (Paint bg = new Paint()) {
-            bg.setColor(0x40FFFFFF);
+            bg.setColor(Colors.GLASS_ITEM_BG);
             canvas.drawRRect(RRect.makeXYWH(x, y, width, height, 8), bg);
         }
 
-        try (Paint textPaint = new Paint().setColor(0xFFEEEEEE)) {
+        try (Paint textPaint = new Paint().setColor(Colors.TEXT_SECONDARY)) {
             Font font = FontManager.INSTANCE.getTextFont(13);
             FontMetrics metrics = font.getMetrics();
             float textY = y + height / 2 - (metrics.getAscent() + metrics.getDescent()) / 2;
-            canvas.drawString(setting.getName(), x + 12, textY, font, textPaint);
+            canvas.drawString(setting.getName(), x + 14, textY, font, textPaint);
         }
 
         String value = modeSetting.getValue();
-        try (Paint valPaint = new Paint().setColor(0xFFFFFFFF)) {
+        try (Paint valPaint = new Paint().setColor(Colors.TEXT_PRIMARY)) {
             Font font = FontManager.INSTANCE.getTextFont(12);
             float valW = font.measureTextWidth(value, valPaint);
             canvas.drawString(value, x + width - valW - 28, y + height / 2 + 4, font, valPaint);
         }
         SkiaRenderer.drawCenteredIcon(canvas, expanded ? Icon.ARROW_CIRCLE_UP : Icon.ARROW_CIRCLE_DOWN,
-                x + width - 18, y + height / 2, 12, 0xCCFFFFFF);
+                x + width - 16, y + height / 2, 12, Colors.TEXT_MUTED);
 
         if (dropdownProgress > 0.01f) {
             List<String> modes = modeSetting.getModes();
@@ -97,12 +80,18 @@ public class ModeComponent extends Component {
                 boolean selected = mode.equals(modeSetting.getValue());
                 float optY = listY + i * OPTION_HEIGHT;
                 try (Paint optBg = new Paint()) {
-                    optBg.setColor(selected ? 0x30FFFFFF : 0x10FFFFFF);
-                    canvas.drawRRect(RRect.makeXYWH(x, optY, width, OPTION_HEIGHT, 6), optBg);
+                    optBg.setColor(selected ? Colors.GLASS_ITEM_ACTIVE : Colors.GLASS_ITEM_BG);
+                    canvas.drawRRect(RRect.makeXYWH(x + 4, optY, width - 8, OPTION_HEIGHT, 6), optBg);
                 }
-                try (Paint optText = new Paint().setColor(selected ? 0xFFFFFFFF : 0xCCFFFFFF)) {
+                try (Paint optBorder = new Paint()) {
+                    optBorder.setMode(PaintMode.STROKE);
+                    optBorder.setStrokeWidth(1f);
+                    optBorder.setColor(Colors.GLASS_BORDER);
+                    canvas.drawRRect(RRect.makeXYWH(x + 4, optY, width - 8, OPTION_HEIGHT, 6), optBorder);
+                }
+                try (Paint optText = new Paint().setColor(selected ? Colors.TEXT_PRIMARY : Colors.TEXT_SECONDARY)) {
                     Font font = FontManager.INSTANCE.getTextFont(12);
-                    canvas.drawString(mode, x + 16, optY + OPTION_HEIGHT / 2 + 4, font, optText);
+                    canvas.drawString(mode, x + 18, optY + OPTION_HEIGHT / 2 + 4, font, optText);
                 }
             }
             canvas.restore();
@@ -112,20 +101,27 @@ public class ModeComponent extends Component {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (!setting.isVisible()) return false;
-        if (isHovered(mouseX, mouseY, currentX, currentY, width, height)) {
-            expanded = !expanded;
+        if (expanded) {
+            if (dropdownProgress > 0.5f) {
+                float startY = currentY + height;
+                List<String> modes = modeSetting.getModes();
+                for (int i = 0; i < modes.size(); i++) {
+                    float optY = startY + i * OPTION_HEIGHT;
+                    if (mouseX >= currentX + 4 && mouseX <= currentX + width - 4
+                            && mouseY >= optY && mouseY <= optY + OPTION_HEIGHT) {
+                        modeSetting.setValue(modes.get(i));
+                        expanded = false;
+                        return true;
+                    }
+                }
+            }
+            expanded = false;
             return true;
         }
-        if (expanded && dropdownProgress > 0.8f) {
-            float startY = currentY + height;
-            List<String> modes = modeSetting.getModes();
-            for (int i = 0; i < modes.size(); i++) {
-                float optY = startY + i * OPTION_HEIGHT;
-                if (mouseX >= currentX && mouseX <= currentX + width && mouseY >= optY && mouseY <= optY + OPTION_HEIGHT) {
-                    modeSetting.setValue(modes.get(i));
-                    expanded = false;
-                    return true;
-                }
+        if (isHovered(mouseX, mouseY, currentX, currentY)) {
+            if (button == 0) {
+                expanded = true;
+                return true;
             }
         }
         return false;
