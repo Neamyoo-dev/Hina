@@ -9,3 +9,4 @@ bin
 *.launch
 .trae
 .kotlin
+.agents
