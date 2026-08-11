@@ -39,14 +39,14 @@ public class HinaHandler {
                 } catch (Exception ignored) {
                 }
             }
-            while (MioHr.getINSTANCE().clickGuiKey.isDown()) {
-                if (!(client.screen instanceof ClickGuiScreen)) {
-                    MioHr.getINSTANCE().moduleManager.getClickGuiModule().setEnabled(true);
-                }
+            if (MioHr.getINSTANCE().clickGuiKey.consumeClick()
+                    && !(client.screen instanceof ClickGuiScreen)) {
+                MioHr.getINSTANCE().moduleManager.getClickGuiModule().setEnabled(true);
             }
         });
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
             MioHr.getINSTANCE().configManager.save();
+            FontManager.INSTANCE.close();
         });
     }
 

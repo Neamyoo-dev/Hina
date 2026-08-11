@@ -49,19 +49,17 @@ public class FontManager {
 
     public void init() {
         if (initialized) return;
-        try {
-            InputStream textStream = Minecraft.getInstance().getResourceManager()
-                .getResource(Identifier.fromNamespaceAndPath("miohr", "fonts/pingfang-regular.ttf")).get().open();
-            byte[] textBytes = textStream.readAllBytes();
-            textTypeface = Typeface.makeFromData(Data.makeFromBytes(textBytes));
-            
-            InputStream iconStream = Minecraft.getInstance().getResourceManager()
-                .getResource(Identifier.fromNamespaceAndPath("miohr", "fonts/icon.ttf")).get().open();
-            byte[] iconBytes = iconStream.readAllBytes();
-            iconTypeface = Typeface.makeFromData(Data.makeFromBytes(iconBytes));
-            
+        try (InputStream textStream = Minecraft.getInstance().getResourceManager()
+                     .getResource(Identifier.fromNamespaceAndPath("miohr", "fonts/pingfang-regular.ttf")).orElseThrow().open();
+             InputStream iconStream = Minecraft.getInstance().getResourceManager()
+                     .getResource(Identifier.fromNamespaceAndPath("miohr", "fonts/icon.ttf")).orElseThrow().open();
+             Data textData = Data.makeFromBytes(textStream.readAllBytes());
+             Data iconData = Data.makeFromBytes(iconStream.readAllBytes())) {
+            textTypeface = Typeface.makeFromData(textData);
+            iconTypeface = Typeface.makeFromData(iconData);
             initialized = true;
-        } catch (Exception ignored) {
+        } catch (Exception exception) {
+            throw new IllegalStateException("Failed to initialize MioHr fonts", exception);
         }
     }
 
@@ -71,5 +69,17 @@ public class FontManager {
 
     public Font getTextFont(float size) {
         return textFonts.computeIfAbsent(size, s -> new Font(textTypeface, s));
+    }
+
+    public void close() {
+        textFonts.values().forEach(Font::close);
+        iconFonts.values().forEach(Font::close);
+        textFonts.clear();
+        iconFonts.clear();
+        if (textTypeface != null) textTypeface.close();
+        if (iconTypeface != null) iconTypeface.close();
+        textTypeface = null;
+        iconTypeface = null;
+        initialized = false;
     }
 }

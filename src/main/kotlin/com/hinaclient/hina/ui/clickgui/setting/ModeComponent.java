@@ -49,19 +49,26 @@ public class ModeComponent extends Component {
 
         try (Paint bg = new Paint()) {
             bg.setColor(Colors.GLASS_ITEM_BG);
-            canvas.drawRRect(RRect.makeXYWH(x, y, width, height, 8), bg);
+            canvas.drawRRect(RRect.makeXYWH(x, y, width, height, 9), bg);
+        }
+        try (Paint border = new Paint().setColor(Colors.GLASS_BORDER).setMode(PaintMode.STROKE).setStrokeWidth(1f)) {
+            canvas.drawRRect(RRect.makeXYWH(x, y, width, height, 9), border);
         }
 
         try (Paint textPaint = new Paint().setColor(Colors.TEXT_SECONDARY)) {
-            Font font = FontManager.INSTANCE.getTextFont(13);
+            Font font = FontManager.INSTANCE.getTextFont(11);
             FontMetrics metrics = font.getMetrics();
             float textY = y + height / 2 - (metrics.getAscent() + metrics.getDescent()) / 2;
             canvas.drawString(setting.getName(), x + 14, textY, font, textPaint);
         }
 
         String value = modeSetting.getValue();
+        try (Paint valueBg = new Paint().setColor(Colors.SURFACE_RECESSED)) {
+            float valueWidth = Math.max(74f, FontManager.INSTANCE.getTextFont(10).measureTextWidth(value) + 30f);
+            canvas.drawRRect(RRect.makeXYWH(x + width - valueWidth - 10f, y + 8f, valueWidth, height - 16f, 6f), valueBg);
+        }
         try (Paint valPaint = new Paint().setColor(Colors.TEXT_PRIMARY)) {
-            Font font = FontManager.INSTANCE.getTextFont(12);
+            Font font = FontManager.INSTANCE.getTextFont(10);
             float valW = font.measureTextWidth(value, valPaint);
             canvas.drawString(value, x + width - valW - 28, y + height / 2 + 4, font, valPaint);
         }

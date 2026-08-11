@@ -25,7 +25,10 @@ public class BindComponent extends Component {
 
         try (Paint bg = new Paint()) {
             bg.setColor(Colors.GLASS_ITEM_BG);
-            canvas.drawRRect(RRect.makeXYWH(x, y, width, height, 8), bg);
+            canvas.drawRRect(RRect.makeXYWH(x, y, width, height, 9), bg);
+        }
+        try (Paint border = new Paint().setColor(Colors.GLASS_BORDER).setMode(PaintMode.STROKE).setStrokeWidth(1f)) {
+            canvas.drawRRect(RRect.makeXYWH(x, y, width, height, 9), border);
         }
 
         boolean hover = isHovered(mouseX, mouseY, x, y);
@@ -42,24 +45,26 @@ public class BindComponent extends Component {
         }
         String text;
         if (listening) {
-            text = "Press a key...";
+            text = "PRESS KEY";
         } else if (key != null) {
-            text = "Keybind: " + key.toUpperCase();
+            text = key.toUpperCase();
         } else {
-            text = "Keybind: None";
+            text = "NONE";
         }
 
         try (Paint textPaint = new Paint().setColor(listening ? Colors.getThemeColor() : Colors.TEXT_SECONDARY)) {
-            Font font = FontManager.INSTANCE.getTextFont(13);
+            Font font = FontManager.INSTANCE.getTextFont(10);
             FontMetrics metrics = font.getMetrics();
             float textY = y + height / 2 - (metrics.getAscent() + metrics.getDescent()) / 2;
-            canvas.drawString(text, x + 14, textY, font, textPaint);
+            canvas.drawString("Keybind", x + 14, textY, FontManager.INSTANCE.getTextFont(11), textPaint);
+            float textWidth = font.measureTextWidth(text, textPaint);
+            canvas.drawString(text, x + width - textWidth - 14, textY, font, textPaint);
         }
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (isHovered(mouseX, mouseY, currentX, currentY) && button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
+        if (isHovered(mouseX, mouseY, currentX, currentY) && button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
             listening = !listening;
             return true;
         }

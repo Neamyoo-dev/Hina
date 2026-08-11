@@ -23,6 +23,8 @@ import com.hinaclient.hina.event.skia.EventSkiaDrawScene;
 import com.hinaclient.hina.module.Category;
 import com.hinaclient.hina.module.Module;
 import com.hinaclient.hina.skia.font.FontManager;
+import com.hinaclient.hina.ui.Colors;
+import com.hinaclient.hina.ui.hud.HudElement;
 import com.mojang.authlib.GameProfile;
 import com.mojang.blaze3d.platform.NativeImage;
 import io.github.humbleui.skija.*;
@@ -44,7 +46,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-public class TargetHud extends Module {
+public class TargetHud extends Module implements HudElement {
     private final Minecraft mc = Minecraft.getInstance();
     private final Map<String, Image> headCache = new HashMap<>();
 
@@ -57,11 +59,8 @@ public class TargetHud extends Module {
     private LivingEntity lastTarget = null;
     private long lastSeenTime = 0L;
 
-    private final int C_BG = 0xEE1A1C23;
-    private final int C_HINA = 0xFF5C6BC0;
-    private final int C_HINA_LIGHT = 0xFFD1C4E9;
-    private final int C_WHITE = 0xFFFDFDFD;
-    private final int C_DAMAGE = 0xFFFF5252;
+    private static final float HUD_WIDTH = 250f;
+    private static final float HUD_HEIGHT = 58f;
 
     public TargetHud() {
         super("TargetHud", Category.RENDER);
@@ -72,6 +71,9 @@ public class TargetHud extends Module {
         if (!FontManager.INSTANCE.isInitialized()) FontManager.INSTANCE.init();
 
         var canvas = event.getCanvas();
+        if (currentTarget != null && (!currentTarget.isAlive() || Util.getMillis() - lastSeenTime >= 30000)) {
+            currentTarget = null;
+        }
 
         boolean shouldShow = currentTarget != null || (lastTarget != null && (Util.getMillis() - lastSeenTime) < 30000);
 
@@ -80,8 +82,7 @@ public class TargetHud extends Module {
             lastHp = -1f;
             lastTarget = null;
             if (displayAnim < 0.01f) {
-                headCache.clear();
-                return;
+                closeHeadCache();
             }
         } else {
             displayAnim = Mth.lerp(0.12f, displayAnim, 1f);
@@ -92,7 +93,11 @@ public class TargetHud extends Module {
             lastHp = displayEntity.getHealth();
             damageFlash = Mth.lerp(0.08f, damageFlash, 0f);
 
+            float scale = (float) mc.getWindow().getGuiScale();
+            canvas.save();
+            canvas.scale(scale, scale);
             renderHud(canvas, displayEntity);
+            canvas.restore();
         }
     }
 
@@ -104,8 +109,8 @@ public class TargetHud extends Module {
     }
 
     private void renderHud(Canvas canvas, LivingEntity target) {
-        float w = 250f;
-        float h = 50f;
+        float w = HUD_WIDTH;
+        float h = HUD_HEIGHT;
         float x = (float) getX();
         float y = (float) getY();
 
@@ -115,11 +120,15 @@ public class TargetHud extends Module {
         canvas.translate(-w / 2, -h / 2);
 
         try (var p = new Paint()) {
-            p.setColor(C_BG);
-            canvas.drawRRect(RRect.makeXYWH(0, 0, w, h, 6f), p);
-            int sideColor = Color.makeLerp(C_HINA, C_DAMAGE, damageFlash);
+            p.setColor(Colors.SURFACE);
+            canvas.drawRRect(RRect.makeXYWH(0, 0, w, h, Colors.RADIUS_MEDIUM), p);
+            int sideColor = Color.makeLerp(Colors.ACCENT, Colors.DANGER, damageFlash);
             p.setColor(sideColor);
             canvas.drawRect(Rect.makeXYWH(0, 8, 3f, h - 16), p);
+            p.setColor(Colors.GLASS_BORDER);
+            p.setMode(PaintMode.STROKE);
+            p.setStrokeWidth(1f);
+            canvas.drawRRect(RRect.makeXYWH(0, 0, w, h, Colors.RADIUS_MEDIUM), p);
         }
 
         if (target instanceof Player p) {
@@ -130,7 +139,7 @@ public class TargetHud extends Module {
         Font fontBold = FontManager.INSTANCE.getTextFont(15f);
         Font fontSmall = FontManager.INSTANCE.getTextFont(11f);
 
-        try (var p = new Paint().setColor(C_WHITE)) {
+        try (var p = new Paint().setColor(Colors.TEXT_PRIMARY)) {
             canvas.drawString(target.getName().getString(), 48, 20, fontBold, p);
             p.setAlpha(160);
             canvas.drawString(String.format("%.1f HP", target.getHealth()), 48, 32, fontSmall, p);
@@ -163,8 +172,8 @@ public class TargetHud extends Module {
         try (var p = new Paint()) {
             p.setColor(0x44000000);
             canvas.drawRRect(RRect.makeXYWH(x, y, w, h, 1f), p);
-            int c1 = Color.makeLerp(C_HINA, C_DAMAGE, damageFlash);
-            int c2 = Color.makeLerp(C_HINA_LIGHT, C_DAMAGE, damageFlash);
+            int c1 = Color.makeLerp(Colors.ACCENT, Colors.DANGER, damageFlash);
+            int c2 = Color.makeLerp(Colors.ACCENT_LIGHT, Colors.DANGER, damageFlash);
             try (var s = Shader.makeLinearGradient(x, y, x + w * hpAnim, y, new int[]{c1, c2})) {
                 p.setShader(s);
                 canvas.drawRRect(RRect.makeXYWH(x, y, w * hpAnim, h, 1f), p);
@@ -230,5 +239,28 @@ public class TargetHud extends Module {
         );
 
         return Image.makeRasterFromBytes(info, byteArray, nativeImage.getWidth() * 4L);
+    }
+
+    private void closeHeadCache() {
+        headCache.values().forEach(Image::close);
+        headCache.clear();
+    }
+
+    @Override
+    protected void onDisable() {
+        closeHeadCache();
+        currentTarget = null;
+        lastTarget = null;
+        super.onDisable();
+    }
+
+    @Override
+    public float getHudWidth() {
+        return HUD_WIDTH;
+    }
+
+    @Override
+    public float getHudHeight() {
+        return HUD_HEIGHT;
     }
 }

@@ -10,3 +10,7 @@ bin
 .trae
 .kotlin
 .agents
+docs/superpowers/
+.zcode
+web
+.dbg

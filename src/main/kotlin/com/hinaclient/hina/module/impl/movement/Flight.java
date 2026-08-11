@@ -42,7 +42,7 @@ public class Flight extends Module {
     private final BooleanSetting bypass = new BooleanSetting("Bypass", true);
 
     public Flight() {
-        super("Flight", Category.MOVEMENT);
+        super("Flight", Category.HACKS);
 
         addSetting(mode);
         addSetting(vSpeed);

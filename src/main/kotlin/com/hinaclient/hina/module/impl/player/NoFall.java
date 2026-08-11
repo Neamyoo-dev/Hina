@@ -35,7 +35,7 @@ public class NoFall extends Module {
     private final ModeSetting mode = new ModeSetting("Mode", "No Ground", "No Ground");
 
     public NoFall() {
-        super("NoFall", Category.PLAYER);
+        super("NoFall", Category.HACKS);
         addSetting(mode);
     }
 

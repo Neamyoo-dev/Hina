@@ -33,17 +33,20 @@ public class CheckboxComponent extends Component {
 
         try (Paint bg = new Paint()) {
             bg.setColor(Colors.GLASS_ITEM_BG);
-            canvas.drawRRect(RRect.makeXYWH(x, y, width, height, 8), bg);
+            canvas.drawRRect(RRect.makeXYWH(x, y, width, height, 9), bg);
+        }
+        try (Paint border = new Paint().setColor(Colors.GLASS_BORDER).setMode(PaintMode.STROKE).setStrokeWidth(1f)) {
+            canvas.drawRRect(RRect.makeXYWH(x, y, width, height, 9), border);
         }
 
         try (Paint textPaint = new Paint().setColor(Colors.TEXT_SECONDARY)) {
-            Font font = FontManager.INSTANCE.getTextFont(13);
+            Font font = FontManager.INSTANCE.getTextFont(11);
             FontMetrics metrics = font.getMetrics();
             float textY = y + height / 2 - (metrics.getAscent() + metrics.getDescent()) / 2;
             canvas.drawString(setting.getName(), x + 14, textY, font, textPaint);
         }
 
-        float switchW = 38, switchH = 20;
+        float switchW = 33, switchH = 19;
         float switchX = x + width - switchW - 14;
         float switchY = y + (height - switchH) / 2;
 
@@ -63,7 +66,7 @@ public class CheckboxComponent extends Component {
         float knobX = switchX + 2 + (switchW - knobSize - 4) * animationProgress;
         float knobY = switchY + 2;
         try (Paint knob = new Paint()) {
-            knob.setColor(0xFFFFFFFF);
+            knob.setColor(Colors.ON_ACCENT);
             canvas.drawCircle(knobX + knobSize / 2, knobY + knobSize / 2, knobSize / 2, knob);
         }
     }

@@ -22,8 +22,8 @@ import com.hinaclient.hina.event.EventListener;
 import com.hinaclient.hina.event.EventBus;
 import com.hinaclient.hina.event.impl.KeyEvent;
 import com.hinaclient.hina.module.impl.combat.*;
-import com.hinaclient.hina.module.impl.misc.*;
 import com.hinaclient.hina.module.impl.movement.*;
+import com.hinaclient.hina.module.impl.optimization.*;
 import com.hinaclient.hina.module.impl.player.*;
 import com.hinaclient.hina.module.impl.render.*;
 
@@ -44,21 +44,18 @@ public class ModuleManager {
         modules.add(new ChamsModule());
         modules.add(new FullbrightModule());
         modules.add(new NoFall());
-        modules.add(new Velocity());
-        modules.add(new Disabled());
         modules.add(new ModuleList());
         modules.add(new TargetHud());
         modules.add(new FastPlace());
         modules.add(new SafeAnchor());
-        modules.add(new LegitAura());
-        modules.add(new KnockbackRedirect());
         modules.add(new AutoTotem());
         modules.add(new InvMove());
-        modules.add(new LegitCrystal());
         modules.add(new AutoLunge());
         modules.add(new AutoSoup());
-        modules.add(new AutoPlay());
         modules.add(new MacePlus());
+        modules.add(new MaceKill());
+        modules.add(new BlockOptimizer());
+        modules.add(new NoTotemAnimation());
     }
 
     @EventListener

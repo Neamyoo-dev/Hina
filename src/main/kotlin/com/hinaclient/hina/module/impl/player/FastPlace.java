@@ -34,7 +34,7 @@ public class FastPlace extends Module {
     private final BooleanSetting onlyBlock = new BooleanSetting("only Block", true);
 
     public FastPlace() {
-        super("FastPlace", Category.PLAYER);
+        super("FastPlace", Category.HACKS);
 
         addSetting(startDelay);
         addSetting(onlyBlock);

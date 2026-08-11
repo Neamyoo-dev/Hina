@@ -36,7 +36,7 @@ public class AutoSoup extends Module {
     private long lastUseTime = 0L;
 
     public AutoSoup() {
-        super("AutoSoup", Category.COMBAT);
+        super("AutoSoup", Category.HACKS);
         addSetting(healthThreshold);
         addSetting(minDelay);
         addSetting(maxDelay);

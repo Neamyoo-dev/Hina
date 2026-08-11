@@ -60,18 +60,18 @@ public class ColorComponent extends Component {
 
         try (Paint bg = new Paint()) {
             bg.setColor(Colors.GLASS_ITEM_BG);
-            canvas.drawRRect(RRect.makeXYWH(x, y, width, height, 10), bg);
+            canvas.drawRRect(RRect.makeXYWH(x, y, width, height, 9), bg);
         }
 
         try (Paint border = new Paint()) {
             border.setMode(PaintMode.STROKE);
             border.setStrokeWidth(1f);
             border.setColor(Colors.GLASS_BORDER);
-            canvas.drawRRect(RRect.makeXYWH(x, y, width, height, 10), border);
+            canvas.drawRRect(RRect.makeXYWH(x, y, width, height, 9), border);
         }
 
         try (Paint text = new Paint().setColor(Colors.TEXT_SECONDARY)) {
-            Font font = FontManager.INSTANCE.getTextFont(13);
+            Font font = FontManager.INSTANCE.getTextFont(11);
             canvas.drawString(setting.getName(), x + pad, y + 16, font, text);
         }
 

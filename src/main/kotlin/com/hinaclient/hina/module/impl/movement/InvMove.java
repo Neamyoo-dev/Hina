@@ -36,7 +36,7 @@ public class InvMove extends Module {
     private boolean dispatching = false;
 
     public InvMove() {
-        super("InvMove", Category.MOVEMENT);
+        super("InvMove", Category.HACKS);
     }
 
     @EventListener

@@ -6,6 +6,7 @@ import com.hinaclient.hina.event.EventListener;
 import com.hinaclient.hina.event.skia.EventSkiaDrawScene;
 import com.hinaclient.hina.module.Module;
 import com.hinaclient.hina.skia.font.FontManager;
+import com.hinaclient.hina.ui.hud.HudElement;
 import io.github.humbleui.skija.Font;
 import io.github.humbleui.skija.FontMetrics;
 import io.github.humbleui.skija.Paint;
@@ -18,12 +19,9 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
-import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 public class EditScreen extends Screen {
@@ -35,8 +33,6 @@ public class EditScreen extends Screen {
     private int lastMouseRenderX;
     private int lastMouseRenderY;
 
-    private static final float MODULE_WIDTH = 100;
-    private static final float MODULE_HEIGHT = 30;
     private static final float MODULE_CORNER = 4;
     private static final float GRID_COLUMNS = 5;
     private static final float GRID_STEP_X = 110;
@@ -50,8 +46,8 @@ public class EditScreen extends Screen {
         List<Module> allModules = MioHr.getINSTANCE().moduleManager.getModules();
         int index = 0;
         for (Module module : allModules) {
-            if (hasSkiaRender(module)) {
-                if (isPositionDefault(module)) {
+            if (module instanceof HudElement) {
+                if (isPositionDefault(module, index)) {
                     module.setX(DEFAULT_X + (index % GRID_COLUMNS) * GRID_STEP_X);
                     module.setY(DEFAULT_Y + (index / GRID_COLUMNS) * GRID_STEP_Y);
                     initializedModules.add(module);
@@ -62,35 +58,10 @@ public class EditScreen extends Screen {
         }
     }
 
-    private boolean isPositionDefault(Module module) {
-        return !initializedModules.contains(module)
-                && module.getX() == 0 && module.getY() == 0
-                && !hasBeenDragged(module);
-    }
-
-    private boolean hasBeenDragged(Module module) {
-        return module.getX() != DEFAULT_X || module.getY() != DEFAULT_Y;
-    }
-
-    private static final Map<Class<?>, Boolean> SKIA_RENDER_CACHE = new HashMap<>();
-
-    private boolean hasSkiaRender(Module module) {
-        Class<?> clazz = module.getClass();
-        return SKIA_RENDER_CACHE.computeIfAbsent(clazz, c -> {
-            Class<?> current = c;
-            while (current != null && current != Object.class) {
-                for (Method method : current.getDeclaredMethods()) {
-                    if (method.isAnnotationPresent(EventListener.class)) {
-                        Class<?>[] params = method.getParameterTypes();
-                        if (params.length == 1 && params[0].equals(EventSkiaDrawScene.class)) {
-                            return true;
-                        }
-                    }
-                }
-                current = current.getSuperclass();
-            }
-            return false;
-        });
+    private boolean isPositionDefault(Module module, int index) {
+        if (initializedModules.contains(module)) return false;
+        if (module.getX() == 0 && module.getY() == 0) return true;
+        return index > 0 && module.getX() == DEFAULT_X && module.getY() == DEFAULT_Y;
     }
 
     @Override
@@ -121,8 +92,11 @@ public class EditScreen extends Screen {
         }
 
         if (draggingModule != null) {
-            draggingModule.setX(lastMouseRenderX - dragOffsetX);
-            draggingModule.setY(lastMouseRenderY - dragOffsetY);
+            HudElement element = (HudElement) draggingModule;
+            double nextX = Math.max(0, Math.min(sw - element.getHudWidth(), lastMouseRenderX - dragOffsetX));
+            double nextY = Math.max(0, Math.min(sh - element.getHudHeight(), lastMouseRenderY - dragOffsetY));
+            draggingModule.setX(nextX);
+            draggingModule.setY(nextY);
         }
 
         canvas.save();
@@ -139,9 +113,10 @@ public class EditScreen extends Screen {
 
         try (var p = new Paint().setMode(PaintMode.STROKE).setStrokeWidth(1f)) {
             for (Module mod : draggableModules) {
+                HudElement element = (HudElement) mod;
                 p.setColor(mod == draggingModule ? Colors.GLASS_BORDER_ACTIVE : Colors.GLASS_BORDER);
                 canvas.drawRRect(
-                        RRect.makeXYWH((float) mod.getX(), (float) mod.getY(), MODULE_WIDTH, MODULE_HEIGHT, MODULE_CORNER),
+                        RRect.makeXYWH((float) mod.getX(), (float) mod.getY(), element.getHudWidth(), element.getHudHeight(), MODULE_CORNER),
                         p);
             }
         }
@@ -150,20 +125,13 @@ public class EditScreen extends Screen {
 
     @Override
     public boolean mouseClicked(@NotNull MouseButtonEvent event, boolean bl) {
-        double mouseX = event.x();
-        double mouseY = event.y();
-
-        float sw = (float) this.minecraft.getWindow().getGuiScaledWidth();
-        float sh = (float) this.minecraft.getWindow().getGuiScaledHeight();
-        double scaleX = sw / (double) this.minecraft.getWindow().getScreenWidth();
-        double scaleY = sh / (double) this.minecraft.getWindow().getScreenHeight();
-
-        double localX = mouseX * scaleX;
-        double localY = mouseY * scaleY;
+        double localX = event.x();
+        double localY = event.y();
 
         for (Module mod : draggableModules) {
-            if (localX >= mod.getX() && localX <= mod.getX() + MODULE_WIDTH
-                    && localY >= mod.getY() && localY <= mod.getY() + MODULE_HEIGHT) {
+            HudElement element = (HudElement) mod;
+            if (localX >= mod.getX() && localX <= mod.getX() + element.getHudWidth()
+                    && localY >= mod.getY() && localY <= mod.getY() + element.getHudHeight()) {
                 draggingModule = mod;
                 dragOffsetX = localX - mod.getX();
                 dragOffsetY = localY - mod.getY();

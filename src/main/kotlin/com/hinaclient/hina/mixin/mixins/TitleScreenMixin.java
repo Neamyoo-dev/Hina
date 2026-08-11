@@ -18,7 +18,6 @@
 package com.hinaclient.hina.mixin.mixins;
 
 import com.hinaclient.hina.ui.MioHrTitleScreen;
-import com.hinaclient.hina.ui.LoginScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.TitleScreen;
 import org.spongepowered.asm.mixin.Mixin;
@@ -30,7 +29,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class TitleScreenMixin {
     @Inject(method = "init()V", at = @At("HEAD"), cancellable = true)
     public void onInit(CallbackInfo ci) {
-        Minecraft.getInstance().setScreen(new LoginScreen(new MioHrTitleScreen()));
+        Minecraft.getInstance().setScreen(new MioHrTitleScreen());
         ci.cancel();
     }
 

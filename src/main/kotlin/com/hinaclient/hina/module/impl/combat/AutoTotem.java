@@ -39,7 +39,7 @@ public class AutoTotem extends Module {
     private boolean wasSprinting = false;
 
     public AutoTotem() {
-        super("AutoTotem", Category.COMBAT);
+        super("AutoTotem", Category.HACKS);
         addSetting(inventory);
     }
 

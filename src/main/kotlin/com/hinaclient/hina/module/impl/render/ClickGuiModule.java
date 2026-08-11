@@ -25,7 +25,7 @@ import com.hinaclient.hina.ui.ClickGuiScreen;
 import com.hinaclient.hina.setting.*;
 
 public class ClickGuiModule extends Module {
-    public static ColorSetting themeColor = new ColorSetting("Theme Color", 0xFF4CAF50);
+    public static ColorSetting themeColor = new ColorSetting("Theme Color", 0xFF789B82);
     public static ModeSetting test4 = new ModeSetting("Test 4", "a", "a", "b", "c");
     public static BooleanSetting debug = new BooleanSetting("debug", false);
 
@@ -56,7 +56,7 @@ public class ClickGuiModule extends Module {
     
     @Override
     protected void onDisable() {
-        if (client.screen instanceof ClickGuiScreen) client.setScreen(null);
+        if (client.screen instanceof ClickGuiScreen screen) screen.closeGui();
         MioHr.getINSTANCE().configManager.save();
     }
 }

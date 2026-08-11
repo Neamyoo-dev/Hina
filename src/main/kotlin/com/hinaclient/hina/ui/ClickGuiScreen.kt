@@ -1,10 +1,13 @@
 package com.hinaclient.hina.ui
 
+import com.hinaclient.hina.MioHr
 import com.hinaclient.hina.event.EventBus
 import com.hinaclient.hina.event.EventListener
 import com.hinaclient.hina.event.skia.EventSkiaDrawScene
+import com.hinaclient.hina.mixin.mixins.accessors.MinecraftAccessor
 import com.hinaclient.hina.ui.clickgui.Panel
-import com.hinaclient.hina.utils.shader.LiquidGlassShader
+import io.github.humbleui.skija.FilterTileMode
+import io.github.humbleui.skija.ImageFilter
 import io.github.humbleui.types.Rect
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.screens.Screen
@@ -17,6 +20,8 @@ import org.lwjgl.glfw.GLFW
 class ClickGuiScreen : Screen(Component.literal("ClickGUI")) {
     private var panel: Panel? = null
     private var cachedBackground: io.github.humbleui.skija.Image? = null
+    private var guiMouseX = 0
+    private var guiMouseY = 0
 
     companion object {
         private var INSTANCE: ClickGuiScreen? = null
@@ -29,14 +34,16 @@ class ClickGuiScreen : Screen(Component.literal("ClickGUI")) {
 
     override fun init() {
         super.init()
-        LiquidGlassShader.init()
         EventBus.INSTANCE.register(this)
         if (panel == null) {
             panel = Panel()
         }
     }
 
-    override fun render(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, partialTick: Float) {}
+    override fun render(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, partialTick: Float) {
+        guiMouseX = mouseX
+        guiMouseY = mouseY
+    }
 
     @EventListener
     fun onSkiaRender(event: EventSkiaDrawScene) {
@@ -45,57 +52,55 @@ class ClickGuiScreen : Screen(Component.literal("ClickGUI")) {
             return
         }
 
-        if (cachedBackground == null) {
-            cachedBackground = event.surface.makeImageSnapshot()
+        val activePanel = panel ?: return
+        AnimationUtils.tick()
+        activePanel.update(guiMouseX, guiMouseY)
+        activePanel.layout()
+
+        cachedBackground?.close()
+        cachedBackground = event.surface.makeImageSnapshot()
+
+        val scale = minecraft.window.guiScale.toFloat()
+        cachedBackground?.let { background ->
+            ImageFilter.makeBlur(7f * scale, 7f * scale, FilterTileMode.CLAMP).use { blur ->
+                io.github.humbleui.skija.Paint().setImageFilter(blur).use { paint ->
+                event.canvas.saveLayer(Rect.makeWH(minecraft.window.width.toFloat(), minecraft.window.height.toFloat()), paint)
+                event.canvas.drawImage(background, 0f, 0f)
+                event.canvas.restore()
+                }
+            }
         }
-
-        val glassShader = if (cachedBackground != null && panel != null) {
-            LiquidGlassShader.makeShader(
-                cachedBackground!!,
-                Rect.makeXYWH(panel!!.x, panel!!.y, panel!!.width, panel!!.height)
-            )
-        } else null
-
-        panel?.render(event.canvas, 0, 0, glassShader)
+        activePanel.render(event.canvas, guiMouseX, guiMouseY, null)
     }
 
     override fun mouseClicked(event: MouseButtonEvent, bl: Boolean): Boolean {
         if (panel != null) {
-            val scaleX = minecraft.window.guiScale.toDouble()
-            val scaleY = minecraft.window.guiScale.toDouble()
-            return panel!!.mouseClicked(event.x() * scaleX, event.y() * scaleY, event.button())
+            return panel!!.mouseClicked(event.x(), event.y(), event.button())
         }
         return super.mouseClicked(event, bl)
     }
 
     override fun mouseReleased(event: MouseButtonEvent): Boolean {
         if (panel != null) {
-            val scaleX = minecraft.window.guiScale.toDouble()
-            val scaleY = minecraft.window.guiScale.toDouble()
-            panel!!.mouseReleased(event.x() * scaleX, event.y() * scaleY, event.button())
+            panel!!.mouseReleased(event.x(), event.y(), event.button())
         }
         return super.mouseReleased(event)
     }
 
     override fun mouseScrolled(mouseX: Double, mouseY: Double, scrollX: Double, scrollY: Double): Boolean {
         if (panel != null) {
-            val scaleY = minecraft.window.guiScale.toDouble()
-            return panel!!.mouseScrolled(mouseY * scaleY, scrollY)
+            return panel!!.mouseScrolled(mouseY, scrollY)
         }
         return false
     }
 
     override fun keyPressed(event: KeyEvent): Boolean {
-        if (event.key() == GLFW.GLFW_KEY_ESCAPE) {
-            if (panel?.isSearchFocused == true) {
-                panel?.handleKeyPress(event.key())
-                return true
-            }
-            minecraft.screen = null
-            return true
-        }
         val handled = panel?.handleKeyPress(event.key()) ?: false
         if (handled) return true
+        if (event.key() == GLFW.GLFW_KEY_ESCAPE) {
+            closeGui()
+            return true
+        }
         return super.keyPressed(event)
     }
 
@@ -107,15 +112,23 @@ class ClickGuiScreen : Screen(Component.literal("ClickGUI")) {
     }
 
     override fun onClose() {
+        closeGui()
+    }
+
+    fun closeGui() {
         EventBus.INSTANCE.unregister(this)
-        super.onClose()
+        cachedBackground?.close()
+        cachedBackground = null
+        panel?.resetDrag()
+        if (minecraft.screen === this) (minecraft as MinecraftAccessor).`miohr$setScreenDirect`(null)
+        val clickGuiModule = MioHr.INSTANCE.moduleManager.clickGuiModule
+        if (clickGuiModule.isEnabled) clickGuiModule.isEnabled = false
     }
 
     override fun removed() {
         EventBus.INSTANCE.unregister(this)
         cachedBackground?.close()
         cachedBackground = null
-        LiquidGlassShader.invalidateCache()
         panel?.resetDrag()
         super.removed()
     }

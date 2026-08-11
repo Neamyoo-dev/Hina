@@ -41,7 +41,7 @@ public class MacePlus extends Module {
     private int asbState = ASB_IDLE;
 
     public MacePlus() {
-        super("MacePlus", Category.COMBAT);
+        super("MacePlus", Category.HACKS);
         addSetting(alwaysShieldBreak);
     }
 

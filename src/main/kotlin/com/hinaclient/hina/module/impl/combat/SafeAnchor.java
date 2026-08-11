@@ -19,7 +19,7 @@ public class SafeAnchor extends Module {
     private int glowstoneSlot = -1;
 
     public SafeAnchor() {
-        super("SafeAnchor", Category.COMBAT);
+        super("SafeAnchor", Category.HACKS);
     }
 
     @EventListener

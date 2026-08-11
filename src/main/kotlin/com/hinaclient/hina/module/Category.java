@@ -21,11 +21,9 @@ package com.hinaclient.hina.module;
 import com.hinaclient.hina.skia.font.Icon;
 
 public enum Category {
-    COMBAT("Combat", Icon.SWORDS),
-    MOVEMENT("Movement", Icon.DIRECTIONS_RUN),
+    HACKS("Hacks", Icon.SKULL),
     RENDER("Render", Icon.IMAGE),
-    PLAYER("Player", Icon.PERSON),
-    MISC("Misc", Icon.SETTINGS);
+    OPTIMIZATION("Optimization", Icon.SPEED);
 
     private final String name;
     private final String icon;

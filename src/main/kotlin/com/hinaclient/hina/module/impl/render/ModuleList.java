@@ -25,6 +25,8 @@ import com.hinaclient.hina.module.Module;
 import com.hinaclient.hina.setting.BooleanSetting;
 import com.hinaclient.hina.setting.ColorSetting;
 import com.hinaclient.hina.skia.font.FontManager;
+import com.hinaclient.hina.ui.Colors;
+import com.hinaclient.hina.ui.hud.HudElement;
 import io.github.humbleui.skija.*;
 import io.github.humbleui.types.RRect;
 
@@ -32,11 +34,13 @@ import java.util.*;
 import java.util.Comparator;
 import java.util.List;
 
-public class ModuleList extends Module {
+public class ModuleList extends Module implements HudElement {
     private final BooleanSetting iconenb = new BooleanSetting("Icon", true);
     private final BooleanSetting useThemeColor = new BooleanSetting("Use Theme Color", true);
     private final ColorSetting textColor = new ColorSetting("Text Color", 0xFFFFFFFF);
     private final Map<Module, Float> moduleProgressMap = new HashMap<>();
+    private float hudWidth = 120f;
+    private float hudHeight = 40f;
 
     private static final float MODULE_HEIGHT = 30f;
     private static final float PADDING = 10f;
@@ -56,6 +60,9 @@ public class ModuleList extends Module {
         if (!FontManager.INSTANCE.isInitialized()) return;
 
         Canvas canvas = event.getCanvas();
+        float scale = (float) client.getWindow().getGuiScale();
+        canvas.save();
+        canvas.scale(scale, scale);
         Font textFont = FontManager.INSTANCE.getTextFont(16f);
         Font iconFont = FontManager.INSTANCE.getIconFont(18f);
 
@@ -76,7 +83,10 @@ public class ModuleList extends Module {
         List<Module> displayModules = moduleProgressMap.keySet().stream()
                 .sorted(Comparator.comparingDouble((Module m) -> getWidth(m, textFont, iconFont)).reversed())
                 .toList();
-        if (displayModules.isEmpty()) return;
+        if (displayModules.isEmpty()) {
+            canvas.restore();
+            return;
+        }
 
         float xOffset = (float) getX();
         float yOffset = (float) getY();
@@ -88,6 +98,15 @@ public class ModuleList extends Module {
         }
         float panelWidth = maxWidth + PADDING * 2;
         float panelHeight = MODULE_HEIGHT * displayModules.size() + SPACING * (displayModules.size() - 1) + PADDING * 2;
+        hudWidth = panelWidth;
+        hudHeight = panelHeight;
+
+        try (Paint surface = new Paint().setColor(Colors.SURFACE_SOFT);
+             Paint border = new Paint().setColor(Colors.GLASS_BORDER).setMode(PaintMode.STROKE).setStrokeWidth(1f)) {
+            RRect bounds = RRect.makeXYWH(xOffset, yOffset, panelWidth, panelHeight, Colors.RADIUS_MEDIUM);
+            canvas.drawRRect(bounds, surface);
+            canvas.drawRRect(bounds, border);
+        }
 
         int accentColor;
         if (useThemeColor.getValue()) {
@@ -116,7 +135,7 @@ public class ModuleList extends Module {
                 canvas.drawRRect(RRect.makeXYWH(ACCENT_OFFSET, accentY, ACCENT_WIDTH, accentHeight, 2f), accentPaint);
             }
 
-            try (Paint textPaint = new Paint().setColor(0xFFFFFFFF)) {
+            try (Paint textPaint = new Paint().setColor(Colors.TEXT_PRIMARY)) {
                 float textX = ACCENT_OFFSET + ACCENT_WIDTH + 6f;
                 float textY = moduleHeight / 2f + textFont.getMetrics().getCapHeight() / 2f - 2f;
 
@@ -133,6 +152,17 @@ public class ModuleList extends Module {
 
             currentY += moduleHeight + SPACING;
         }
+        canvas.restore();
+    }
+
+    @Override
+    public float getHudWidth() {
+        return hudWidth;
+    }
+
+    @Override
+    public float getHudHeight() {
+        return hudHeight;
     }
 
     private float getWidth(Module m, Font textFont, Font iconFont) {

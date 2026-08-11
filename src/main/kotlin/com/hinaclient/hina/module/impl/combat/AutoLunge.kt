@@ -33,7 +33,7 @@ import net.minecraft.world.item.enchantment.EnchantmentHelper
 import net.minecraft.world.item.enchantment.Enchantments
 
 
-class AutoLunge : Module("AutoLunge", Category.COMBAT) {
+class AutoLunge : Module("AutoLunge", Category.HACKS) {
     private var originalSlot = -1
     private var lungeSlot = -1
     private var stage = 0
@@ -42,7 +42,6 @@ class AutoLunge : Module("AutoLunge", Category.COMBAT) {
     fun onTick(event: ClientTickEvent) {
         if (!this.isEnabled) return
         val player = client.player ?: return
-        val gameMode = client.gameMode ?: return
 
         when (stage) {
             0 -> {
@@ -50,7 +49,6 @@ class AutoLunge : Module("AutoLunge", Category.COMBAT) {
 
                 lungeSlot = findLungeItem()
                 if (lungeSlot == -1) {
-                    sendChatMessage("未找到带有Lunge的物品")
                     this.toggle()
                     return
                 }
@@ -67,7 +65,6 @@ class AutoLunge : Module("AutoLunge", Category.COMBAT) {
                 player.inventory.selectedSlot = originalSlot
                 stage = 0
                 this.toggle()
-                sendChatMessage("切回原槽位，模块关闭")
             }
         }
     }
@@ -91,9 +88,5 @@ class AutoLunge : Module("AutoLunge", Category.COMBAT) {
         val level = client.level ?: return null
         val registry = level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT)
         return registry.get(Enchantments.LUNGE).orElse(null)
-    }
-
-    private fun sendChatMessage(text: String) {
-        client.gui.chat.addMessage(Component.literal("§c[Hina/AutoSpear] $text"))
     }
 }

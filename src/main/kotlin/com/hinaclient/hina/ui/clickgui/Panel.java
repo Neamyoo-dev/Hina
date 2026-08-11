@@ -7,369 +7,323 @@ import com.hinaclient.hina.skia.SkiaRenderer;
 import com.hinaclient.hina.skia.font.FontManager;
 import com.hinaclient.hina.skia.font.Icon;
 import com.hinaclient.hina.ui.Colors;
+import com.hinaclient.hina.ui.ClickGuiScreen;
+import com.hinaclient.hina.ui.EditScreen;
 import io.github.humbleui.skija.*;
 import io.github.humbleui.types.RRect;
 import io.github.humbleui.types.Rect;
 import net.minecraft.client.Minecraft;
+import org.lwjgl.glfw.GLFW;
+
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Locale;
 
 public class Panel {
-    private static final float PANEL_WIDTH_RATIO = 0.55f;
-    private static final float PANEL_HEIGHT_RATIO = 0.65f;
-    private static final float CORNER_RADIUS = 16;
-    private static final float TAB_WIDTH = 72;
-    private static final float SEARCH_BAR_HEIGHT = 42;
-    private static final float HEADER_PADDING = 12;
-    private static final float TAB_ICON_SIZE = 22;
-    private static final float TAB_LABEL_SIZE = 10;
-    private static final float FONT_SIZE_SEARCH = 14;
-    private static final float MODULE_ROW_HEIGHT = 36;
-    private static final float MAX_VISIBLE_CONTENT_HEIGHT = 440;
-
-    private float panelX, panelY, panelW, panelH;
-    private boolean dragging;
-    private float dragOffX, dragOffY;
-    private Category selectedCategory = Category.COMBAT;
-    private float tabHoverAlpha = 0f;
-    private int hoveredTabIndex = -1;
-
+    private static final float NAV_ITEM_HEIGHT = 34f;
+    private static final float SCROLL_SPEED = 24f;
+    private final List<ModuleButton> modules = new ArrayList<>();
+    private Category selectedCategory = Category.HACKS;
+    private ClickGuiLayout layout;
     private String searchQuery = "";
-    private boolean searchFocused = false;
-
-    private final List<ModuleButton> allModuleButtons = new ArrayList<>();
-    private float scrollOffset = 0f;
-    private float maxScrollOffset = 0f;
-    private static final float SCROLL_SPEED = 25f;
-
-    private float openAnimProgress = 1f;
+    private boolean searchFocused;
+    private float scrollOffset;
+    private float maxScrollOffset;
 
     public Panel() {
         for (Category category : Category.values()) {
             for (Module module : MioHr.getINSTANCE().moduleManager.getModulesByCategory(category)) {
-                allModuleButtons.add(new ModuleButton(module, MODULE_ROW_HEIGHT));
+                modules.add(new ModuleButton(module, ClickGuiMetrics.MODULE_HEIGHT));
             }
         }
+    }
+
+    public void layout() {
+        Minecraft minecraft = Minecraft.getInstance();
+        layout = ClickGuiLayout.calculate(minecraft.getWindow().getGuiScaledWidth(), minecraft.getWindow().getGuiScaledHeight());
     }
 
     public void update(int mouseX, int mouseY) {
-        if (dragging) {
-            panelX = mouseX - dragOffX;
-            panelY = mouseY - dragOffY;
-            clampToScreen();
-        }
-
-        for (ModuleButton btn : allModuleButtons) btn.update();
-
-        Category[] cats = Category.values();
-        hoveredTabIndex = -1;
-        float tabStartY = panelY + SEARCH_BAR_HEIGHT + HEADER_PADDING;
-        for (int i = 0; i < cats.length; i++) {
-            float tabY = tabStartY + i * (TAB_ICON_SIZE + 24);
-            if (mouseX >= panelX + HEADER_PADDING && mouseX <= panelX + HEADER_PADDING + TAB_WIDTH
-                    && mouseY >= tabY - 6 && mouseY <= tabY + TAB_ICON_SIZE + 18) {
-                hoveredTabIndex = i;
-                break;
-            }
-        }
-
-        List<ModuleButton> filtered = getFilteredButtons();
-        float totalHeight = 0;
-        for (ModuleButton btn : filtered) totalHeight += btn.getTotalHeight();
-        float contentAreaH = getContentHeight();
-        maxScrollOffset = Math.max(0, totalHeight - contentAreaH);
-        if (scrollOffset > maxScrollOffset) scrollOffset = maxScrollOffset;
-        if (scrollOffset < 0) scrollOffset = 0;
+        layout();
+        modules.forEach(ModuleButton::update);
+        float totalHeight = 0f;
+        for (ModuleButton module : filteredModules()) totalHeight += module.getTotalHeight() + ClickGuiMetrics.MODULE_GAP;
+        maxScrollOffset = Math.max(0f, totalHeight - layout.moduleViewport.getHeight());
+        scrollOffset = Math.clamp(scrollOffset, 0f, maxScrollOffset);
     }
 
     public void render(Canvas canvas, int mouseX, int mouseY, Shader glassShader) {
-        if (openAnimProgress < 0.01f) return;
-
-        float sw = (float) Minecraft.getInstance().getWindow().getWidth();
-        float sh = (float) Minecraft.getInstance().getWindow().getHeight();
-        panelW = sw * PANEL_WIDTH_RATIO;
-        panelH = sh * PANEL_HEIGHT_RATIO;
-        if (!dragging) {
-            panelX = (sw - panelW) / 2;
-            panelY = (sh - panelH) / 2;
-        }
-
-        float drawH = panelH * openAnimProgress;
-
-        try (Paint shadow = new Paint()) {
-            shadow.setColor(Colors.SHADOW);
-            shadow.setMaskFilter(MaskFilter.makeBlur(FilterBlurMode.NORMAL, 20));
-            canvas.drawRRect(RRect.makeXYWH(panelX + 3, panelY + 6, panelW, drawH, CORNER_RADIUS), shadow);
-        }
-
-        if (glassShader != null) {
-            try (Paint glassPaint = new Paint().setShader(glassShader)) {
-                canvas.drawRRect(RRect.makeXYWH(panelX, panelY, panelW, drawH, CORNER_RADIUS), glassPaint);
-            }
-        } else {
-            try (Paint fallback = new Paint().setColor(Colors.GLASS_BG)) {
-                canvas.drawRRect(RRect.makeXYWH(panelX, panelY, panelW, drawH, CORNER_RADIUS), fallback);
-            }
-        }
-
-        try (Paint border = new Paint()) {
-            border.setMode(PaintMode.STROKE);
-            border.setStrokeWidth(1.5f);
-            border.setColor(Colors.GLASS_BORDER);
-            canvas.drawRRect(RRect.makeXYWH(panelX, panelY, panelW, drawH, CORNER_RADIUS), border);
-        }
-
-        drawSearchBar(canvas, mouseX, mouseY);
-        drawTabBar(canvas, mouseX, mouseY);
-        drawContent(canvas, mouseX, mouseY, drawH);
-    }
-
-    private void drawSearchBar(Canvas canvas, int mouseX, int mouseY) {
-        float sx = panelX + HEADER_PADDING + TAB_WIDTH + 14;
-        float sy = panelY + HEADER_PADDING;
-        float sw = panelW - HEADER_PADDING - (HEADER_PADDING + TAB_WIDTH + 14) - HEADER_PADDING;
-        float sh = SEARCH_BAR_HEIGHT - HEADER_PADDING * 2;
-
-        boolean hover = mouseX >= sx && mouseX <= sx + sw && mouseY >= sy && mouseY <= sy + sh;
-
-        try (Paint bg = new Paint()) {
-            bg.setColor(hover || searchFocused ? Colors.GLASS_ITEM_HOVER : Colors.GLASS_ITEM_BG);
-            canvas.drawRRect(RRect.makeXYWH(sx, sy, sw, sh, sh / 2), bg);
-        }
-
-        if (searchQuery.isEmpty() && !searchFocused) {
-            try (Paint hint = new Paint().setColor(Colors.TEXT_MUTED)) {
-                Font font = FontManager.INSTANCE.getTextFont(FONT_SIZE_SEARCH);
-                FontMetrics metrics = font.getMetrics();
-                float textY = sy + sh / 2 - (metrics.getAscent() + metrics.getDescent()) / 2;
-                canvas.drawString("Search modules...", sx + 10, textY, font, hint);
-            }
-        } else {
-            try (Paint textPaint = new Paint().setColor(Colors.TEXT_PRIMARY)) {
-                Font font = FontManager.INSTANCE.getTextFont(FONT_SIZE_SEARCH);
-                FontMetrics metrics = font.getMetrics();
-                float textY = sy + sh / 2 - (metrics.getAscent() + metrics.getDescent()) / 2;
-                canvas.drawString(searchQuery, sx + 10, textY, font, textPaint);
-            }
-        }
-
-        SkiaRenderer.drawCenteredIcon(canvas, Icon.SEARCH, sx + sw - 16, sy + sh / 2, 14, Colors.TEXT_MUTED);
-    }
-
-    private void drawTabBar(Canvas canvas, int mouseX, int mouseY) {
-        Category[] cats = Category.values();
-        float tabStartX = panelX + HEADER_PADDING;
-        float tabStartY = panelY + SEARCH_BAR_HEIGHT + HEADER_PADDING;
-
-        for (int i = 0; i < cats.length; i++) {
-            Category cat = cats[i];
-            float tabY = tabStartY + i * (TAB_ICON_SIZE + 24);
-            boolean selected = cat == selectedCategory;
-            boolean hover = i == hoveredTabIndex;
-
-            if (selected) {
-                try (Paint selBg = new Paint()) {
-                    selBg.setColor(Colors.GLASS_ITEM_ACTIVE);
-                    canvas.drawRRect(RRect.makeXYWH(tabStartX, tabY - 4, TAB_WIDTH, TAB_ICON_SIZE + 24, 8), selBg);
-                }
-                try (Paint selLine = new Paint()) {
-                    selLine.setColor(Colors.getThemeColor());
-                    canvas.drawRRect(RRect.makeXYWH(tabStartX, tabY - 4, 3, TAB_ICON_SIZE + 24, 1.5f), selLine);
-                }
-            } else if (hover) {
-                try (Paint hoverBg = new Paint()) {
-                    hoverBg.setColor(Colors.GLASS_ITEM_HOVER);
-                    canvas.drawRRect(RRect.makeXYWH(tabStartX, tabY - 4, TAB_WIDTH, TAB_ICON_SIZE + 24, 8), hoverBg);
-                }
-            }
-
-            SkiaRenderer.drawCenteredIcon(canvas, cat.getIcon(), tabStartX + TAB_WIDTH / 2, tabY + TAB_ICON_SIZE / 2,
-                    TAB_ICON_SIZE, selected ? Colors.TEXT_PRIMARY : Colors.TEXT_MUTED);
-            try (Paint labelPaint = new Paint().setColor(selected ? Colors.TEXT_PRIMARY : Colors.TEXT_MUTED)) {
-                Font font = FontManager.INSTANCE.getTextFont(TAB_LABEL_SIZE);
-                canvas.drawString(cat.getName(), tabStartX + (TAB_WIDTH - font.measureTextWidth(cat.getName(), labelPaint)) / 2,
-                        tabY + TAB_ICON_SIZE + 16, font, labelPaint);
-            }
-        }
-    }
-
-    private void drawContent(Canvas canvas, int mouseX, int mouseY, float drawH) {
-        List<ModuleButton> filtered = getFilteredButtons();
-        float contentX = panelX + HEADER_PADDING + TAB_WIDTH + 14;
-        float contentY = panelY + SEARCH_BAR_HEIGHT;
-        float contentW = panelW - contentX + panelX - HEADER_PADDING;
-        float contentH = drawH - SEARCH_BAR_HEIGHT - HEADER_PADDING;
-
+        layout();
+        float scale = Minecraft.getInstance().getWindow().getGuiScale();
+        drawFramebufferGlass(canvas, glassShader, scale);
         canvas.save();
-        canvas.clipRect(Rect.makeXYWH(contentX, contentY, contentW, contentH));
+        canvas.scale(scale, scale);
+        drawShell(canvas);
+        drawSidebar(canvas, mouseX, mouseY);
+        drawWorkspace(canvas, mouseX, mouseY);
+        canvas.restore();
+    }
 
-        float yOff = contentY + HEADER_PADDING - scrollOffset;
-        for (ModuleButton btn : filtered) {
-            btn.render(canvas, contentX + 8, yOff, mouseX, mouseY, contentW - 16);
-            yOff += btn.getTotalHeight();
+    private void drawFramebufferGlass(Canvas canvas, Shader glassShader, float scale) {
+        Rect panel = layout.panel;
+        try (Paint shadow = new Paint().setColor(Colors.SHADOW).setMaskFilter(MaskFilter.makeBlur(FilterBlurMode.NORMAL, 20f))) {
+            canvas.drawRRect(RRect.makeXYWH((panel.getLeft() + 3f) * scale, (panel.getTop() + 6f) * scale,
+                    panel.getWidth() * scale, panel.getHeight() * scale, ClickGuiMetrics.PANEL_RADIUS * scale), shadow);
+        }
+        try (Paint surface = new Paint()) {
+            if (glassShader != null) surface.setShader(glassShader); else surface.setColor(Colors.GLASS_BG);
+            canvas.drawRRect(RRect.makeXYWH(panel.getLeft() * scale, panel.getTop() * scale,
+                    panel.getWidth() * scale, panel.getHeight() * scale, ClickGuiMetrics.PANEL_RADIUS * scale), surface);
+        }
+    }
+
+    private void drawShell(Canvas canvas) {
+        Rect panel = layout.panel;
+        RRect shell = RRect.makeXYWH(panel.getLeft(), panel.getTop(), panel.getWidth(), panel.getHeight(), ClickGuiMetrics.PANEL_RADIUS);
+        try (Paint wash = new Paint().setColor(0x36FFFBF4);
+             Paint border = new Paint().setColor(Colors.GLASS_BORDER).setMode(PaintMode.STROKE).setStrokeWidth(1f)) {
+            canvas.drawRRect(shell, wash);
+            canvas.drawRRect(shell, border);
+        }
+        canvas.save();
+        canvas.clipRRect(shell, true);
+        try (Paint rail = new Paint().setColor(0x38FFF9F0);
+             Paint divider = new Paint().setColor(0x28796F60)) {
+            canvas.drawRect(layout.sidebar, rail);
+            canvas.drawRect(Rect.makeXYWH(layout.sidebar.getRight(), layout.panel.getTop(), 1f, layout.panel.getHeight()), divider);
         }
         canvas.restore();
+    }
 
-        if (maxScrollOffset > 0) {
-            drawScrollIndicator(canvas, contentY, contentH);
+    private void drawSidebar(Canvas canvas, int mouseX, int mouseY) {
+        Rect brand = layout.brand;
+        float markSize = 26f;
+        try (Paint mark = new Paint().setColor(Colors.ACCENT);
+             Paint onAccent = new Paint().setColor(Colors.ON_ACCENT);
+             Paint primary = new Paint().setColor(Colors.TEXT_PRIMARY);
+             Paint muted = new Paint().setColor(Colors.TEXT_MUTED)) {
+            canvas.drawRRect(RRect.makeXYWH(brand.getLeft(), brand.getTop(), markSize, markSize, 7f), mark);
+            canvas.drawString("M", brand.getLeft() + 8f, brand.getTop() + 18f, FontManager.INSTANCE.getTextFont(13f), onAccent);
+            float textX = brand.getLeft() + 35f;
+            canvas.drawString("MIOHR CLIENT", textX, brand.getTop() + 11f, FontManager.INSTANCE.getTextFont(10f), primary);
+            canvas.drawString("CONTROL SURFACE", textX, brand.getTop() + 23f, FontManager.INSTANCE.getTextFont(7f), muted);
+            canvas.drawString("1.21.11", textX, brand.getTop() + 33f, FontManager.INSTANCE.getTextFont(7f), muted);
+            canvas.drawString("MODULES", layout.navigation.getLeft(), layout.navigation.getTop() - 10f,
+                    FontManager.INSTANCE.getTextFont(7f), muted);
         }
 
-        if (filtered.isEmpty()) {
-            try (Paint emptyPaint = new Paint().setColor(Colors.TEXT_MUTED)) {
-                Font font = FontManager.INSTANCE.getTextFont(14);
-                canvas.drawString("No modules found", contentX + contentW / 2 - 60,
-                        contentY + contentH / 2, font, emptyPaint);
+        Category[] categories = Category.values();
+        for (int index = 0; index < categories.length; index++) {
+            Category category = categories[index];
+            Rect item = navItem(index);
+            boolean selected = category == selectedCategory;
+            boolean hovered = item.contains(mouseX, mouseY);
+            if (selected || hovered) {
+                try (Paint background = new Paint().setColor(selected ? Colors.ACCENT : Colors.GLASS_ITEM_HOVER)) {
+                    canvas.drawRRect(RRect.makeXYWH(item.getLeft(), item.getTop(), item.getWidth(), item.getHeight(), ClickGuiMetrics.RADIUS), background);
+                }
+            }
+            int foreground = selected ? Colors.ON_ACCENT : hovered ? Colors.TEXT_PRIMARY : Colors.TEXT_MUTED;
+            SkiaRenderer.drawCenteredIcon(canvas, category.getIcon(), item.getLeft() + 15f, item.getTop() + item.getHeight() / 2f, 11f, foreground);
+            try (Paint text = new Paint().setColor(foreground)) {
+                canvas.drawString(category.getName(), item.getLeft() + 32f, item.getTop() + 22f,
+                        FontManager.INSTANCE.getTextFont(selected ? 10f : 9f), text);
             }
         }
-    }
 
-    private void drawScrollIndicator(Canvas canvas, float contentY, float contentH) {
-        float barX = panelX + panelW - HEADER_PADDING - 5;
-        float barY = contentY + HEADER_PADDING;
-        float barH = contentH - HEADER_PADDING * 2;
-        float indicatorH = Math.max(20, barH * (barH / (barH + maxScrollOffset)));
-        float indicatorY = barY + (scrollOffset / maxScrollOffset) * (barH - indicatorH);
-
-        try (Paint track = new Paint()) {
-            track.setColor(Colors.SCROLLBAR_TRACK);
-            canvas.drawRRect(RRect.makeXYWH(barX, barY, 3, barH, 1.5f), track);
-        }
-        try (Paint thumb = new Paint()) {
-            thumb.setColor(Colors.SCROLLBAR_THUMB);
-            canvas.drawRRect(RRect.makeXYWH(barX, indicatorY, 3, indicatorH, 1.5f), thumb);
+        try (Paint line = new Paint().setColor(0x28796F60);
+             Paint muted = new Paint().setColor(Colors.TEXT_MUTED)) {
+            canvas.drawRect(Rect.makeXYWH(layout.footer.getLeft(), layout.footer.getTop(), layout.footer.getWidth(), 1f), line);
+            canvas.drawString("Right Shift · Toggle GUI", layout.footer.getLeft(), layout.footer.getTop() + 19f,
+                    FontManager.INSTANCE.getTextFont(7f), muted);
         }
     }
 
-    private float getContentHeight() {
-        return Math.min(panelH - SEARCH_BAR_HEIGHT - HEADER_PADDING, MAX_VISIBLE_CONTENT_HEIGHT);
+    private void drawWorkspace(Canvas canvas, int mouseX, int mouseY) {
+        Rect header = layout.header;
+        try (Paint accent = new Paint().setColor(Colors.ACCENT);
+             Paint primary = new Paint().setColor(Colors.TEXT_PRIMARY);
+             Paint muted = new Paint().setColor(Colors.TEXT_MUTED)) {
+            canvas.drawString("/ CONFIGURATION SPACE", header.getLeft(), header.getTop() + 8f,
+                    FontManager.INSTANCE.getTextFont(7f), accent);
+            canvas.drawString(selectedCategory.getName() + " modules", header.getLeft(), header.getTop() + 34f,
+                    FontManager.INSTANCE.getTextFont(20f), primary);
+            canvas.drawString("Tune active systems without leaving the game.", header.getLeft(), header.getTop() + 51f,
+                    FontManager.INSTANCE.getTextFont(8f), muted);
+        }
+        drawAction(canvas, layout.hudAction, Icon.WIDGETS, mouseX, mouseY);
+        drawAction(canvas, layout.closeAction, Icon.CLOSE, mouseX, mouseY);
+        drawSearch(canvas, mouseX, mouseY);
+        List<ModuleButton> filtered = filteredModules();
+        try (Paint primary = new Paint().setColor(Colors.TEXT_PRIMARY);
+             Paint muted = new Paint().setColor(Colors.TEXT_MUTED)) {
+            canvas.drawString("Available modules", layout.section.getLeft(), layout.section.getTop() + 20f,
+                    FontManager.INSTANCE.getTextFont(9f), primary);
+            String count = String.format("%02d / %02d", filtered.size(), categoryModules().size());
+            float countWidth = FontManager.INSTANCE.getTextFont(9f).measureTextWidth(count, muted);
+            canvas.drawString(count, layout.section.getRight() - countWidth, layout.section.getTop() + 20f,
+                    FontManager.INSTANCE.getTextFont(9f), muted);
+        }
+        drawModules(canvas, filtered, mouseX, mouseY);
     }
 
-    private List<ModuleButton> getFilteredButtons() {
-        return allModuleButtons.stream()
-                .filter(btn -> btn.getModule().getCategory() == selectedCategory)
-                .filter(btn -> searchQuery.isEmpty()
-                        || btn.getModule().getName().toLowerCase().contains(searchQuery.toLowerCase()))
-                .collect(Collectors.toList());
+    private void drawAction(Canvas canvas, Rect bounds, String icon, int mouseX, int mouseY) {
+        boolean hovered = bounds.contains(mouseX, mouseY);
+        try (Paint background = new Paint().setColor(hovered ? Colors.GLASS_ITEM_ACTIVE : Colors.GLASS_ITEM_BG);
+             Paint border = new Paint().setColor(hovered ? Colors.GLASS_BORDER_ACTIVE : Colors.GLASS_BORDER)
+                     .setMode(PaintMode.STROKE).setStrokeWidth(1f)) {
+            RRect shape = RRect.makeXYWH(bounds.getLeft(), bounds.getTop(), bounds.getWidth(), bounds.getHeight(), ClickGuiMetrics.RADIUS);
+            canvas.drawRRect(shape, background);
+            canvas.drawRRect(shape, border);
+        }
+        SkiaRenderer.drawCenteredIcon(canvas, icon, bounds.getLeft() + bounds.getWidth() / 2f,
+                bounds.getTop() + bounds.getHeight() / 2f, 14f, hovered ? Colors.ACCENT : Colors.TEXT_MUTED);
+    }
+
+    private void drawSearch(Canvas canvas, int mouseX, int mouseY) {
+        Rect search = layout.search;
+        boolean hovered = search.contains(mouseX, mouseY);
+        try (Paint background = new Paint().setColor(Colors.GLASS_ITEM_BG);
+             Paint border = new Paint().setColor(searchFocused || hovered ? Colors.GLASS_BORDER_ACTIVE : Colors.GLASS_BORDER)
+                     .setMode(PaintMode.STROKE).setStrokeWidth(1f)) {
+            RRect shape = RRect.makeXYWH(search.getLeft(), search.getTop(), search.getWidth(), search.getHeight(), 12f);
+            canvas.drawRRect(shape, background);
+            canvas.drawRRect(shape, border);
+        }
+        SkiaRenderer.drawCenteredIcon(canvas, Icon.SEARCH, search.getLeft() + 16f, search.getTop() + search.getHeight() / 2f,
+                12f, Colors.TEXT_MUTED);
+        String text = searchQuery.isEmpty() ? "Search modules..." : searchQuery;
+        try (Paint paint = new Paint().setColor(searchQuery.isEmpty() ? Colors.TEXT_MUTED : Colors.TEXT_PRIMARY)) {
+            canvas.drawString(text, search.getLeft() + 31f, search.getTop() + 28f, FontManager.INSTANCE.getTextFont(11f), paint);
+        }
+        try (Paint key = new Paint().setColor(Colors.TEXT_MUTED)) {
+            canvas.drawString("CTRL K", search.getRight() - 39f, search.getTop() + 27f, FontManager.INSTANCE.getTextFont(8f), key);
+        }
+    }
+
+    private void drawModules(Canvas canvas, List<ModuleButton> filtered, int mouseX, int mouseY) {
+        Rect viewport = layout.moduleViewport;
+        canvas.save();
+        canvas.clipRect(viewport);
+        float y = viewport.getTop() - scrollOffset;
+        for (ModuleButton module : filtered) {
+            module.render(canvas, viewport.getLeft(), y, mouseX, mouseY, viewport.getWidth());
+            y += module.getTotalHeight() + ClickGuiMetrics.MODULE_GAP;
+        }
+        canvas.restore();
+        if (filtered.isEmpty()) {
+            try (Paint muted = new Paint().setColor(Colors.TEXT_MUTED)) {
+                canvas.drawString("No modules match your search", viewport.getLeft() + 16f, viewport.getTop() + 30f,
+                        FontManager.INSTANCE.getTextFont(11f), muted);
+            }
+        }
+        if (maxScrollOffset > 0f) {
+            float trackHeight = viewport.getHeight();
+            float thumbHeight = Math.max(20f, trackHeight * trackHeight / (trackHeight + maxScrollOffset));
+            float thumbY = viewport.getTop() + scrollOffset / maxScrollOffset * (trackHeight - thumbHeight);
+            try (Paint thumb = new Paint().setColor(Colors.SCROLLBAR_THUMB)) {
+                canvas.drawRRect(RRect.makeXYWH(viewport.getRight() - 3f, thumbY, 3f, thumbHeight, 2f), thumb);
+            }
+        }
     }
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        float sx = panelX + HEADER_PADDING;
-        float sy = panelY + HEADER_PADDING;
-        float sw = panelW - HEADER_PADDING - HEADER_PADDING;
-
-        if (button == 0 && mouseX >= sx && mouseX <= sx + sw
-                && mouseY >= sy && mouseY <= sy + SEARCH_BAR_HEIGHT) {
+        if (layout == null) layout();
+        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && layout.closeAction.contains((float) mouseX, (float) mouseY)) {
+            ClickGuiScreen instance = ClickGuiScreen.Companion.getInstance();
+            if (instance != null) instance.closeGui();
+            return true;
+        }
+        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && layout.hudAction.contains((float) mouseX, (float) mouseY)) {
+            Minecraft.getInstance().setScreen(new EditScreen());
+            return true;
+        }
+        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && layout.search.contains((float) mouseX, (float) mouseY)) {
             searchFocused = true;
             return true;
         }
-
-        Category[] cats = Category.values();
-        float tabStartX = panelX + HEADER_PADDING;
-        float tabStartY = panelY + SEARCH_BAR_HEIGHT + HEADER_PADDING;
-        for (int i = 0; i < cats.length; i++) {
-            float tabY = tabStartY + i * (TAB_ICON_SIZE + 24);
-            if (mouseX >= tabStartX && mouseX <= tabStartX + TAB_WIDTH
-                    && mouseY >= tabY - 4 && mouseY <= tabY + TAB_ICON_SIZE + 24) {
-                if (button == 0) {
-                    selectedCategory = cats[i];
-                    scrollOffset = 0;
-                    return true;
-                }
+        for (int index = 0; index < Category.values().length; index++) {
+            if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && navItem(index).contains((float) mouseX, (float) mouseY)) {
+                selectedCategory = Category.values()[index];
+                searchFocused = false;
+                scrollOffset = 0f;
+                return true;
             }
         }
-
-        if (button == 0 && mouseX >= panelX && mouseX <= panelX + panelW
-                && mouseY >= panelY && mouseY <= panelY + panelH) {
-            dragging = true;
-            dragOffX = (float) mouseX - panelX;
-            dragOffY = (float) mouseY - panelY;
-            return true;
+        if (!layout.moduleViewport.contains((float) mouseX, (float) mouseY)) {
+            searchFocused = false;
+            return false;
         }
-
-        List<ModuleButton> filtered = getFilteredButtons();
-        float contentX = panelX + HEADER_PADDING + TAB_WIDTH + 14;
-        float contentY = panelY + SEARCH_BAR_HEIGHT;
-        float yOff = contentY + HEADER_PADDING - scrollOffset;
-        for (ModuleButton btn : filtered) {
-            if (btn.mouseClicked(mouseX, mouseY, button, contentX + 8, yOff)) return true;
-            yOff += btn.getTotalHeight();
+        float y = layout.moduleViewport.getTop() - scrollOffset;
+        for (ModuleButton module : filteredModules()) {
+            if (module.mouseClicked(mouseX, mouseY, button, layout.moduleViewport.getLeft(), y)) return true;
+            y += module.getTotalHeight() + ClickGuiMetrics.MODULE_GAP;
         }
-
-        return false;
-    }
-
-    public boolean mouseScrolled(double mouseY, double delta) {
-        if (maxScrollOffset <= 0) return false;
-        float contentY = panelY + SEARCH_BAR_HEIGHT;
-        if (mouseY >= contentY && mouseY <= panelY + panelH) {
-            scrollOffset -= (float) delta * SCROLL_SPEED;
-            scrollOffset = Math.clamp(scrollOffset, 0, maxScrollOffset);
-            return true;
-        }
+        searchFocused = false;
         return false;
     }
 
     public void mouseReleased(double mouseX, double mouseY, int button) {
-        if (button == 0) dragging = false;
-        List<ModuleButton> filtered = getFilteredButtons();
-        float contentX = panelX + HEADER_PADDING + TAB_WIDTH + 14;
-        float contentY = panelY + SEARCH_BAR_HEIGHT;
-        float yOff = contentY + HEADER_PADDING - scrollOffset;
-        for (ModuleButton btn : filtered) {
-            btn.mouseReleased(mouseX, mouseY, button, contentX + 8, yOff);
-            yOff += btn.getTotalHeight();
+        float y = layout.moduleViewport.getTop() - scrollOffset;
+        for (ModuleButton module : filteredModules()) {
+            module.mouseReleased(mouseX, mouseY, button, layout.moduleViewport.getLeft(), y);
+            y += module.getTotalHeight() + ClickGuiMetrics.MODULE_GAP;
         }
+    }
+
+    public boolean mouseScrolled(double mouseY, double delta) {
+        if (layout == null || mouseY < layout.moduleViewport.getTop() || mouseY > layout.moduleViewport.getBottom()) return false;
+        scrollOffset = Math.clamp(scrollOffset - (float) delta * SCROLL_SPEED, 0f, maxScrollOffset);
+        return true;
     }
 
     public boolean handleKeyPress(int keyCode) {
         if (searchFocused) {
-            if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+            if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
                 searchFocused = false;
-                searchQuery = "";
                 return true;
+            }
+            if (keyCode == GLFW.GLFW_KEY_BACKSPACE && !searchQuery.isEmpty()) {
+                searchQuery = searchQuery.substring(0, searchQuery.length() - 1);
+                scrollOffset = 0f;
             }
             return true;
         }
-        List<ModuleButton> filtered = getFilteredButtons();
-        for (ModuleButton btn : filtered) {
-            if (btn.handleKeyPress(keyCode)) return true;
+        if (keyCode == GLFW.GLFW_KEY_K) {
+            searchFocused = true;
+            return true;
         }
+        for (ModuleButton module : filteredModules()) if (module.handleKeyPress(keyCode)) return true;
         return false;
     }
 
     public boolean handleCharTyped(char chr) {
-        if (searchFocused) {
-            if (chr == '\b' && !searchQuery.isEmpty()) {
-                searchQuery = searchQuery.substring(0, searchQuery.length() - 1);
-            } else if (chr >= 32 && chr < 127) {
-                searchQuery += chr;
-            }
-            scrollOffset = 0;
-            return true;
-        }
-        return false;
+        if (!searchFocused || Character.isISOControl(chr)) return false;
+        searchQuery += chr;
+        scrollOffset = 0f;
+        return true;
     }
 
     public void resetDrag() {
-        dragging = false;
     }
 
-    public boolean isSearchFocused() {
-        return searchFocused;
+    public float getX() { return layout == null ? 0f : layout.panel.getLeft(); }
+    public float getY() { return layout == null ? 0f : layout.panel.getTop(); }
+    public float getWidth() { return layout == null ? 0f : layout.panel.getWidth(); }
+    public float getHeight() { return layout == null ? 0f : layout.panel.getHeight(); }
+
+    private Rect navItem(int index) {
+        return Rect.makeXYWH(layout.navigation.getLeft(), layout.navigation.getTop() + index * (NAV_ITEM_HEIGHT + 5f),
+                layout.navigation.getWidth(), NAV_ITEM_HEIGHT);
     }
 
-    private void clampToScreen() {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.getWindow() == null) return;
-        int sw = mc.getWindow().getWidth();
-        int sh = mc.getWindow().getHeight();
-        panelX = Math.clamp(panelX, 0, sw - 200);
-        panelY = Math.clamp(panelY, 0, sh - 200);
+    private List<ModuleButton> categoryModules() {
+        return modules.stream().filter(module -> module.getModule().getCategory() == selectedCategory).toList();
     }
 
-    public float getX() { return panelX; }
-    public float getY() { return panelY; }
-    public float getWidth() { return panelW; }
-    public float getHeight() { return panelH; }
+    private List<ModuleButton> filteredModules() {
+        String query = searchQuery.toLowerCase(Locale.ROOT);
+        return modules.stream().filter(module -> module.getModule().getCategory() == selectedCategory)
+                .filter(module -> query.isEmpty() || module.getModule().getName().toLowerCase(Locale.ROOT).contains(query)).toList();
+    }
 }
