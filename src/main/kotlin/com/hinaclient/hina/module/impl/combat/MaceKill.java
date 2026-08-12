@@ -87,8 +87,8 @@ public class MaceKill extends Module {
         if (client.player == null || client.level == null || state != IDLE) return;
         if (System.currentTimeMillis() - lastSmash < cooldown.getValue()) return;
 
-        // The server-side player must fall freely: standing on the ground would reset fallDistance.
-        if (client.player.onGround()) return;
+        // Works on the ground too: the server-side player is lifted up, falls freely to
+        // accumulate fallDistance, and is struck BEFORE it lands (landing resets fallDistance).
 
         if (!(client.player.getMainHandItem().getItem() instanceof MaceItem)) {
             if (!autoMace.getValue()) return;
@@ -132,9 +132,11 @@ public class MaceKill extends Module {
             fallTicks++;
             // Free fall distance after t ticks: 0.08 * (1 + 2 + ... + t)
             double fallen = GRAVITY * fallTicks * (fallTicks + 1) / 2.0;
-            // Strike slightly early so the server-side position is still near the target;
-            // at that point the server's fallDistance has (almost) reached the target height.
-            if (fallen >= height - 2.0 || fallTicks > 5 * Math.sqrt(height) + 20) {
+            // Strike a few blocks before the server-side player would land (landing resets
+            // fallDistance). The strike itself teleports the server-side player next to the
+            // target, so the remaining distance does not matter.
+            double minFallen = Math.max(1.6, height - 8.0);
+            if (fallen >= minFallen || fallTicks > 5 * Math.sqrt(height) + 20) {
                 strike();
             }
         }
@@ -156,6 +158,14 @@ public class MaceKill extends Module {
             state = IDLE;
             return;
         }
+        // Teleport the server-side player right next to the target so the attack distance
+        // check passes. absSnapTo does not touch fallDistance, which has already been
+        // accumulated by the free fall.
+        Vec3 tp = target.position().add(0.0, 1.0, 0.0);
+        PacketUtil.sendNoEvent(new ServerboundMovePlayerPacket.PosRot(
+                tp.x, tp.y, tp.z,
+                client.player.getYRot(), client.player.getXRot(),
+                false, false));
         PacketUtil.sendNoEvent(ServerboundInteractPacket.createAttackPacket(target, true));
         client.player.swing(client.player.getUsedItemHand());
         if (wasFlying && elytraRestore.getValue()) {
