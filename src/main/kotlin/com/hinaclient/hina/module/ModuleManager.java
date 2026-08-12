@@ -55,6 +55,7 @@ public class ModuleManager {
         modules.add(new MacePlus());
         modules.add(new MaceKill());
         modules.add(new BlockOptimizer());
+        modules.add(new AntiCrash());
         modules.add(new NoTotemAnimation());
     }
 
